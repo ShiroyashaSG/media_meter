@@ -22,17 +22,19 @@ class User(AbstractUser):
         unique=True,
         db_index=True,
         validators=[RegexValidator(
-            regex=r'^[\w.@+-]$',
+            regex=r'^[\w.@+-]+\Z',
             message='Недопустимый символ в имени пользователя.'
         )]
     )
-    email = models.CharField(
+    email = models.EmailField(
         'Email',
         max_length=254,
         unique=True,
-        validators=[EmailValidator(
-            message='Недопустимые символы в адресе электронной почты.'
-        )]
+        error_messages={
+            'unique': 'Пользователь с таким email уже существует.',
+            'invalid': 'Введите корректный email адрес.',
+            'blank': 'Это поле не может быть пустым.'
+        }
     )
     first_name = models.CharField(
         'Имя',
@@ -63,3 +65,15 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return self.username
+
+    @property
+    def is_admin(self):
+        return self.role == Role.ADMIN.name
+
+    @property
+    def is_moderator(self):
+        return self.role == Role.MODERATOR.name
+
+    @property
+    def is_user(self):
+        return self.role == Role.USER.name
