@@ -1,12 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import Comment, Review, MockTitle
-
-
-class MockTitleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MockTitle
-        fields = ['id', 'name', 'description']
+from reviews.models import Comment, Review, Title
+from django.shortcuts import get_object_or_404
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -16,19 +11,29 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ['id', 'title', 'author', 'text', 'score', 'pub_date']
+        fields = ['id', 'text', 'author', 'score', 'pub_date']
 
     def validate_score(self, value):
         if value < 1 or value > 10:
             raise serializers.ValidationError(
-                'Рейтинг должен бытьот 1 до 10.'
+                'Рейтинг должен быть от 1 до 10.'
             )
         return value
 
     def validate(self, data):
+        request = self.context['request']
         title_id = self.context['view'].kwargs.get('title_id')
-        if not MockTitle.objects.filter(id=title_id).exists():
-            raise ValidationError("Произведение не найдено.")
+        title = get_object_or_404(Title, id=title_id)
+
+        # Проверяем, оставил ли пользователь уже отзыв на это произведение
+        if Review.objects.filter(title=title.id, author=request.user).exists():
+            raise serializers.ValidationError(
+                'Вы уже оставили отзыв на это произведение.'
+            )
+
+        # Присваиваем найденное произведение, чтобы оно сохранилось корректно
+        data['title'] = title.id  # Присваиваем title, чтобы сохранить его позже
+        # data['title'] = title
         return data
 
 

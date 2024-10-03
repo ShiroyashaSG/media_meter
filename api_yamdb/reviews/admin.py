@@ -1,12 +1,5 @@
 from django.contrib import admin
-from .models import MockTitle, Review, Comment
-
-
-@admin.register(MockTitle)
-class MockTitleAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'description')
-    search_fields = ('name',)
-    list_filter = ('name',)
+from .models import Review, Comment
 
 
 @admin.register(Review)
