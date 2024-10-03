@@ -1,10 +1,12 @@
-from rest_framework import viewsets, permissions, status
-from reviews.models import Review, Comment
+from rest_framework import viewsets, permissions, status, filters
+from reviews.models import Review, Comment, Category, Genre, Title
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (ReviewSerializer, CommentSerializer,)
+from .serializers import (ReviewSerializer, CommentSerializer,
+                          CategorySerializer, GenreSerializer, TitleSerializer)
 from reviews.models import Title
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -59,3 +61,27 @@ class CommentViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BaseViewSet(viewsets.ModelViewSet):
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['name', 'slug']
+    search_fields = ('name', 'slug')
+
+
+class CategoryViewSet(BaseViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class GenreViewSet(BaseViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['name', 'year', 'category', 'genre']
+    search_fields = ('name', 'year', 'category', 'genre')

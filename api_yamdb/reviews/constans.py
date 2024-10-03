@@ -1,0 +1,2 @@
+MAX_LENGTH: int = 256
+LIMIT_LENGTH: int = 5

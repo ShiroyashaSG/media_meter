@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from reviews.models import Comment, Review, Title
+from reviews.models import Comment, Review, Title, Category, Genre
 from django.shortcuts import get_object_or_404
 
 
@@ -51,3 +51,30 @@ class CommentSerializer(serializers.ModelSerializer):
         if not Review.objects.filter(id=review_id).exists():
             raise ValidationError("Отзыв не найден.")
         return data
+
+
+class GenreSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Genre
+        fields = ('id', 'name', 'slug')
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ('id', 'name', 'slug')
+
+
+class TitleSerializer(serializers.ModelSerializer):
+    genre = serializers.SlugRelatedField(
+        many=True, slug_field='slug', queryset=Genre.objects.all()
+    )
+    category = serializers.SlugRelatedField(
+        slug_field='slug', queryset=Category.objects.all()
+    )
+
+    class Meta:
+        model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')

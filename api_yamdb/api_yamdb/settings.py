@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -22,9 +21,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_filters',
     'reviews.apps.ReviewsConfig',
-    'users.apps.UsersConfig',
-    'api.apps.ApiConfig'
+    'api.apps.ApiConfig',
+    'users.apps.UsersConfig'
 ]
 
 MIDDLEWARE = [

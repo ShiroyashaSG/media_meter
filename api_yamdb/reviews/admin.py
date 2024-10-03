@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Review, Comment
+from .models import Review, Comment, Category, Genre, Title
 
 
 @admin.register(Review)
@@ -15,3 +15,36 @@ class CommentAdmin(admin.ModelAdmin):
     list_display = ('id', 'review', 'author', 'text', 'pub_date')
     search_fields = ('review__title', 'author__username')
     list_filter = ('pub_date',)
+
+
+class BaseAdmin(admin.ModelAdmin):
+    '''Базовая админ модель.'''
+    list_display = ('name', 'slug')
+    search_fields = ('name',)
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(Title)
+class TitleAdmin(admin.ModelAdmin):
+    '''Админ модель произведения'''
+
+    list_display = ('name', 'year', 'category')
+    search_fields = ('name',)
+    list_filter = ('category', 'year')
+    ordering = ('-year',)
+    verbose_name = 'Произведение'
+    verbose_name_plural = 'Произведения'
+
+
+@admin.register(Genre)
+class GenreAdmin(BaseAdmin):
+    '''Админ модель жанра.'''
+    verbose_name = 'Жанр'
+    verbose_name_plural = 'Жанры'
+
+
+@admin.register(Category)
+class CategoryAdmin(BaseAdmin):
+    '''Админ модель категории.'''
+    verbose_name = 'Категория'
+    verbose_name_plural = 'Категории'
