@@ -4,6 +4,10 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator, EmailValidator
 from django.db import models
 
+from api_yamdb.constant import (
+    MAX_LENGTH_NAME, MAX_LENGTH_EMAIL, MAX_LENGTH_ROLE
+)
+
 
 class Role(Enum):
     """Поле перечисления ролей пользователей."""
@@ -18,7 +22,7 @@ class User(AbstractUser):
 
     username = models.CharField(
         'Имя пользователя',
-        max_length=150,
+        max_length=MAX_LENGTH_NAME,
         unique=True,
         db_index=True,
         validators=[RegexValidator(
@@ -28,7 +32,7 @@ class User(AbstractUser):
     )
     email = models.EmailField(
         'Email',
-        max_length=254,
+        max_length=MAX_LENGTH_EMAIL,
         unique=True,
         error_messages={
             'unique': 'Пользователь с таким email уже существует.',
@@ -38,12 +42,12 @@ class User(AbstractUser):
     )
     first_name = models.CharField(
         'Имя',
-        max_length=150,
+        max_length=MAX_LENGTH_NAME,
         blank=True
     )
     last_name = models.CharField(
         'Фамилия',
-        max_length=150,
+        max_length=MAX_LENGTH_NAME,
         blank=True
     )
     bio = models.TextField(
@@ -52,7 +56,7 @@ class User(AbstractUser):
     )
     role = models.CharField(
         'Роль',
-        max_length=20,
+        max_length=MAX_LENGTH_ROLE,
         choices=[(role.value, role.name) for role in Role],
         default=Role.USER.value,
         help_text='Admin, moderator или user. По-умолчанию user.'

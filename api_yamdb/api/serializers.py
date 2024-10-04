@@ -5,6 +5,108 @@ from rest_framework.validators import UniqueValidator
 
 from users.models import User
 from reviews.models import Category, Genre, Title, Review, Comment
+from api_yamdb.constant import (
+    MAX_LENGTH_EMAIL, MAX_LENGTH_NAME
+)
+
+
+class UserMixin:
+    """Миксин для сериализатора пользователя."""
+
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]+\Z',
+        max_length=MAX_LENGTH_NAME,
+        required=True,
+        validators=[UniqueValidator(
+            queryset=User.objects.all(),
+            message='Пользователь с таким именем username уже существует.'
+        )],
+        error_messages={
+            'invalid': (
+                'Имя пользователя может содержать только буквы, цифры ',
+                'и символы @/./+/-/_'
+            )
+        }
+    )
+    email = serializers.EmailField(
+        max_length=MAX_LENGTH_EMAIL,
+        required=True,
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message='Пользователь с таким именем email уже существует.'
+            )
+        ]
+    )
+
+    def validate_username(self, username):
+        """Влидация поля username на доступность использования 'me' в качестве
+        username пользователя.
+        """
+
+        if username == 'me':
+            raise serializers.ValidationError(
+                'Нельзя использовать \'me\' в качестве username.'
+            )
+        return username
+
+
+class UserSerializer(UserMixin, serializers.ModelSerializer):
+    """Сериализатор пользователя, регистрируемого администратором."""
+
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
+        )
+
+
+class UserCreateSerializer(UserMixin, serializers.ModelSerializer):
+    """Сериализатор пользователя, регистрируемого самостоятельно."""
+
+    class Meta:
+        model = User
+        fields = ('username', 'email')
+
+
+class TokenCreateSerializer(serializers.Serializer):
+    """Сериализатор токена."""
+
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]+\Z',
+        max_length=MAX_LENGTH_NAME,
+        required=True
+    )
+    confirmation_code = serializers.CharField(
+        required=True
+    )
+
+
+class GenreSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Genre
+        fields = ('id', 'name', 'slug')
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ('id', 'name', 'slug')
+
+
+class TitleSerializer(serializers.ModelSerializer):
+    genre = serializers.SlugRelatedField(
+        many=True, slug_field='slug', queryset=Genre.objects.all()
+    )
+    category = serializers.SlugRelatedField(
+        slug_field='slug', queryset=Category.objects.all()
+    )
+
+    class Meta:
+        model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -35,8 +137,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             )
 
         # Присваиваем найденное произведение, чтобы оно сохранилось корректно
-        data['title'] = title.id  # Присваиваем title, чтобы сохранить его позже
-        # data['title'] = title
+        data['title'] = title.id
         return data
 
 
@@ -54,91 +155,3 @@ class CommentSerializer(serializers.ModelSerializer):
         if not Review.objects.filter(id=review_id).exists():
             raise ValidationError("Отзыв не найден.")
         return data
-
-
-class GenreSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Genre
-        fields = ('id', 'name', 'slug')
-
-
-class CategorySerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Category
-        fields = ('id', 'name', 'slug')
-
-
-class TitleSerializer(serializers.ModelSerializer):
-    genre = serializers.SlugRelatedField(
-        many=True, slug_field='slug', queryset=Genre.objects.all()
-    )
-    category = serializers.SlugRelatedField(
-        slug_field='slug', queryset=Category.objects.all()
-    )
-
-    class Meta:
-        model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
-
-
-class UserSerializer(serializers.ModelSerializer):
-
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+\Z',
-        max_length=150,
-        required=True,
-        validators=[UniqueValidator(
-            queryset=User.objects.all(),
-            message='Пользователь с таким именем username уже существует.'
-        )],
-        error_messages={
-            'invalid': (
-                'Имя пользователя может содержать только буквы, цифры ',
-                'и символы @/./+/-/_'
-            )
-        }
-    )
-    email = serializers.EmailField(
-        max_length=254,
-        required=True,
-        validators=[
-            UniqueValidator(
-                queryset=User.objects.all(),
-                message='Пользователь с таким именем email уже существует.'
-            )
-        ]
-    )
-
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
-        )
-
-    def validate_username(self, username):
-        if username == 'me':
-            raise serializers.ValidationError(
-                'Нельзя использовать \'me\' в качестве username.'
-            )
-        return username
-
-
-class UserCreateSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields = ('username', 'email')
-
-
-class TokenCreateSerializer(serializers.ModelSerializer):
-
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+\Z',
-        max_length=150,
-        required=True
-    )
-    confirmation_code = serializers.CharField(
-        required=True
-    )
