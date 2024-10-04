@@ -1,7 +1,10 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from reviews.models import Comment, Review, Title, Category, Genre
-from django.shortcuts import get_object_or_404
+from rest_framework.validators import UniqueValidator
+
+from users.models import User
+from reviews.models import Category, Genre, Title, Review, Comment
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -51,9 +54,6 @@ class CommentSerializer(serializers.ModelSerializer):
         if not Review.objects.filter(id=review_id).exists():
             raise ValidationError("Отзыв не найден.")
         return data
-from rest_framework.validators import UniqueValidator
-from reviews.models import Category, Genre, Title
-from users.models import User
 
 
 class GenreSerializer(serializers.ModelSerializer):

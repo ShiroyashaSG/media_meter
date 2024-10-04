@@ -1,12 +1,18 @@
-from rest_framework import viewsets, permissions, status, filters
-from reviews.models import Review, Comment, Category, Genre, Title
-from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .permissions import IsAuthorOrReadOnly
-from .serializers import (ReviewSerializer, CommentSerializer,
-                          CategorySerializer, GenreSerializer, TitleSerializer)
-from reviews.models import Title
 from django_filters.rest_framework import DjangoFilterBackend
+from django.contrib.auth.tokens import default_token_generator
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework import viewsets, permissions, status, filters
+
+from users.models import User
+from reviews.models import Review, Comment, Category, Genre, Title
+from .serializers import (
+    UserCreateSerializer, TokenCreateSerializer, UserSerializer,
+    CategorySerializer, GenreSerializer, TitleSerializer,
+    ReviewSerializer, CommentSerializer
+)
+# from .permissions import IsAuthorOrReadOnly
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -61,18 +67,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
-from rest_framework import filters, viewsets, mixins, status
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.tokens import default_token_generator
-from rest_framework.decorators import action
-
-from users.models import User
-from reviews.models import Category, Genre, Title
-from .serializers import (
-    CategorySerializer, GenreSerializer, TitleSerializer,
-    UserCreateSerializer, TokenCreateSerializer, UserSerializer
-)
 
 
 class BaseViewSet(viewsets.ModelViewSet):
