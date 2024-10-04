@@ -1,7 +1,9 @@
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.tokens import default_token_generator
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework import viewsets, permissions, status, filters, mixins
 
 from users.models import User
@@ -80,6 +82,8 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         serializer = UserCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user, _ = User.objects.get_or_create(**serializer.validated_data)
+        confirmation_code = default_token_generator.make_token(user)
+        print(confirmation_code)  # Тут будет отправка письма.
         # Тут будет отправка токена сообщением
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -93,8 +97,16 @@ class TokenCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     def create(self, request):
         """Генерация токена на основе кода подтверждения."""
 
-        # Тут будет проверка токена.
-        message = "Тут будет токен"
+        serializer = TokenCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data.get('username')
+        user = get_object_or_404(User, username=username)
+        confirmation_code = serializer.validated_data.get('confirmation_code')
+        if not default_token_generator.check_token(user, confirmation_code):
+            message = {'token': 'Ошибка валидации токена.'}
+            return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        access_token = str(AccessToken.for_user(user))
+        message = {'token': access_token}
         return Response(message, status=status.HTTP_200_OK)
 
 
