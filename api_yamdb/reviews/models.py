@@ -4,52 +4,11 @@ from django.core.validators import (MinValueValidator, MaxValueValidator,
                                     RegexValidator)
 
 from django.utils import timezone
-from .constans import LIMIT_LENGTH, MAX_LENGTH
+from .constans import (LIMIT_LENGTH, MAX_LENGTH, MIN_SCORE_VALUE,
+                       MAX_SCORE_VALUE)
 
 
 User = get_user_model()
-
-
-class Title(models.Model):
-    pass
-
-
-class Review(models.Model):
-    title = models.ForeignKey(
-        Title,
-        on_delete=models.CASCADE,
-        related_name='reviews'
-    )
-    text = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE,
-                               related_name='reviews')
-    score = models.PositiveIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(10)],  # Ограничение от 1 до 10
-        help_text="Оценка от 1 до 10."
-    )
-    pub_date = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('author', 'title')  # Один отзыв от пользователя на одно произведение
-        ordering = ['-pub_date']  # Упорядочивание по дате публикации
-
-    def __str__(self):
-        return f'{self.author_id} — {self.title} ({self.score})'
-
-
-class Comment(models.Model):
-    review = models.ForeignKey(Review, on_delete=models.CASCADE,
-                               related_name='comments')
-    text = models.TextField('Текст комментария')
-    author = models.ForeignKey(User, on_delete=models.CASCADE,
-                               related_name='comments')
-    pub_date = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['pub_date']
-
-    def __str__(self):
-        return f'{self.author} комментирует {self.review}'
 
 
 class BaseModel(models.Model):
@@ -66,7 +25,7 @@ class BaseModel(models.Model):
         )]
     )
 
-    def __str__(self):
+    def str(self):
         return self.name
 
     class Meta:
@@ -108,9 +67,69 @@ class Title(models.Model):
         related_name='titles'
     )
 
-    def __str__(self):
+    def str(self):
         return self.name
 
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
+
+
+class Review(models.Model):
+    title = models.ForeignKey(
+        Title,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name='Произведение'
+    )
+    text = models.TextField('Текст отзыва', max_length=MAX_LENGTH)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name='Автор'
+    )
+    score = models.PositiveIntegerField(
+        'Оценка',
+        validators=[
+            MinValueValidator(MIN_SCORE_VALUE),
+            MaxValueValidator(MAX_SCORE_VALUE)
+        ],
+        help_text=f"Оценка от {MIN_SCORE_VALUE} до {MAX_SCORE_VALUE}."
+    )
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+
+    class Meta:
+        # Один отзыв от пользователя на одно произведение
+        unique_together = ('author', 'title')
+        ordering = ['-pub_date']  # Упорядочивание по дате публикации
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+
+    def str(self):
+        return f'{self.author_id} — {self.title} ({self.score})'
+
+
+class Comment(models.Model):
+    review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Отзыв'
+    )
+    text = models.TextField('Текст комментария', max_length=MAX_LENGTH)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Автор'
+    )
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+
+    class Meta:
+        ordering = ['pub_date']
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+
+    def str(self):
+        return f'{self.author} комментирует {self.review}'
