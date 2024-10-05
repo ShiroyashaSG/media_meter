@@ -136,8 +136,9 @@ class ReviewSerializer(serializers.ModelSerializer):
                 'Вы уже оставили отзыв на это произведение.'
             )
 
-        # Присваиваем найденное произведение, чтобы оно сохранилось корректно
+        # Присваиваем title, чтобы сохранить его позже
         data['title'] = title.id
+        # data['title'] = title
         return data
 
 
@@ -154,4 +155,5 @@ class CommentSerializer(serializers.ModelSerializer):
         review_id = self.context['view'].kwargs.get('review_id')
         if not Review.objects.filter(id=review_id).exists():
             raise ValidationError("Отзыв не найден.")
+
         return data
