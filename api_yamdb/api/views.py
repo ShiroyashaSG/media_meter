@@ -3,6 +3,7 @@ from reviews.models import Review, Comment, Category, Genre, Title
 from django.shortcuts import get_object_or_404
 from .permissions import (IsModeratorOrOwner, IsAdminOrReadOnly,
                           CanCreateReview)
+
 from .serializers import (ReviewSerializer, CommentSerializer,
                           CategorySerializer, GenreSerializer, TitleSerializer)
 from reviews.models import Title
@@ -61,7 +62,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id)
         serializer.save(author=self.request.user, review=review)
-
 
 class BaseViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
