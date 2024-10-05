@@ -136,8 +136,9 @@ class ReviewSerializer(serializers.ModelSerializer):
                 'Вы уже оставили отзыв на это произведение.'
             )
 
-        # Присваиваем найденное произведение, чтобы оно сохранилось корректно
+        # Присваиваем title, чтобы сохранить его позже
         data['title'] = title.id
+        # data['title'] = title
         return data
 
 

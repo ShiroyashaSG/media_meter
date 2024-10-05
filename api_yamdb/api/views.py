@@ -11,7 +11,8 @@ from .serializers import (
     CategorySerializer, GenreSerializer, TitleSerializer,
     ReviewSerializer, CommentSerializer
 )
-from .permissions import IsAuthorOrReadOnly
+from .permissions import (IsModeratorOrOwner, IsAdminOrReadOnly,
+                          CanCreateReview)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -127,7 +128,17 @@ class ReviewViewSet(viewsets.ModelViewSet):
     Вьюсет для работы с отзывами.
     """
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            self.permission_classes = (CanCreateReview,)
+        # Для PATCH и DELETE разрешаем доступ автору, модератору или админу
+        elif self.request.method in ['PATCH', 'DELETE']:
+            self.permission_classes = (
+                IsModeratorOrOwner,
+                IsAdminOrReadOnly
+            )
+        return super().get_permissions()
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
@@ -143,10 +154,18 @@ class CommentViewSet(viewsets.ModelViewSet):
     Вьюсет для работы с комментариями.
     """
     serializer_class = CommentSerializer
-    permission_classes = [
-        permissions.IsAuthenticatedOrReadOnly,
-        IsAuthorOrReadOnly
-    ]
+
+    def get_permissions(self):
+        # Для POST-запросов используем пермишен для создания комментариев
+        if self.request.method == 'POST':
+            self.permission_classes = (CanCreateReview,)
+        # Для PATCH и DELETE разрешаем доступ автору, модератору или админу
+        elif self.request.method in ['PATCH', 'DELETE']:
+            self.permission_classes = (
+                IsModeratorOrOwner,
+                IsAdminOrReadOnly
+            )
+        return super().get_permissions()
 
     def get_queryset(self):
         review_id = self.kwargs.get('review_id')
@@ -154,23 +173,5 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         review_id = self.kwargs.get('review_id')
-        review = Review.objects.get(id=review_id)
+        review = get_object_or_404(Review, id=review_id)
         serializer.save(author=self.request.user, review=review)
-
-    def partial_update(self, request, *args, **kwargs):
-        """
-        Частичное обновление комментария.
-        """
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
-
-    def destroy(self, request, *args, **kwargs):
-        """
-        Удаление комментария.
-        """
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
