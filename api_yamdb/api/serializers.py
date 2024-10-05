@@ -155,5 +155,4 @@ class CommentSerializer(serializers.ModelSerializer):
         review_id = self.context['view'].kwargs.get('review_id')
         if not Review.objects.filter(id=review_id).exists():
             raise ValidationError("Отзыв не найден.")
-
         return data

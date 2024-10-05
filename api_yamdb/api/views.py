@@ -1,3 +1,4 @@
+from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,7 +14,7 @@ from .serializers import (
     CategorySerializer, GenreSerializer, TitleSerializer,
     ReviewSerializer, CommentSerializer
 )
-
+from api_yamdb.settings import EMAIL_YAMDB
 from .permissions import (IsModeratorOrOwner, IsAdminOrReadOnly,
                           CanCreateReview)
 
@@ -85,8 +86,13 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
         user, _ = User.objects.get_or_create(**serializer.validated_data)
         confirmation_code = default_token_generator.make_token(user)
-        print(confirmation_code)  # Тут будет отправка письма.
-        # Тут будет отправка токена сообщением
+        send_mail(
+            subject='Код подтверждения',
+            message=f'Ваш код подтверждения: {confirmation_code}',
+            from_email=EMAIL_YAMDB,
+            recipient_list=(user.email, ),
+            fail_silently=False,
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -109,8 +115,6 @@ class TokenCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
         access_token = str(AccessToken.for_user(user))
         message = {'token': access_token}
-        # Тут будет проверка токена.
-        message = "Тут будет токен"
         return Response(message, status=status.HTTP_200_OK)
 
 
@@ -188,5 +192,6 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         review_id = self.kwargs.get('review_id')
+
         review = get_object_or_404(Review, id=review_id)
         serializer.save(author=self.request.user, review=review)
