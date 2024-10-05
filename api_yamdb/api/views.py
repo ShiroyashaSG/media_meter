@@ -1,4 +1,3 @@
-from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
 from django_filters.rest_framework import DjangoFilterBackend
@@ -14,9 +13,11 @@ from .serializers import (
     CategorySerializer, GenreSerializer, TitleSerializer,
     ReviewSerializer, CommentSerializer
 )
-from api_yamdb.settings import EMAIL_YAMDB
-from .permissions import (IsModeratorOrOwner, IsAdminOrReadOnly,
-                          CanCreateReview)
+from .permissions import (
+    IsAnonymous, IsAuthor, IsModerator, IsSuperUserOrIsAdmin,
+    IsAdminOrReadOnly, IsModeratorOrOwner, CanCreateReview
+)
+from .utils import send_confirmation_code
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -28,6 +29,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     filter_backends = (filters.SearchFilter, )
     search_fields = ('username', )
+    permission_classes = (IsSuperUserOrIsAdmin, )
 
     @action(
         detail=False,
@@ -52,14 +54,16 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(
         detail=False,
         methods=['get', 'patch'],
-        url_path='me'
+        url_path='me',
+        permission_classes=(permissions.IsAuthenticated, )
     )
     def user_by_me(self, request):
         """Изменение данных своей учетной записи."""
-
         if request.method == 'PATCH':
+            data = request.data.copy()
+            data.pop('role', None)
             serializer = UserSerializer(
-                request.user, data=request.data, partial=True,
+                request.user, data=data, partial=True,
                 context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
@@ -76,23 +80,38 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     queryset = User.objects.all()
     serializer_class = UserCreateSerializer
+    permission_classes = (permissions.AllowAny, )
 
     def create(self, request):
         """Создание пользователя и генерация кода поддтверждения
         через email.
         """
-
         serializer = UserCreateSerializer(data=request.data)
+        user = User.objects.filter(
+            username=request.data.get('username')
+        ).first()
+        if user:
+            if user.email == serializer.initial_data.get('email'):
+                confirmation_code = default_token_generator.make_token(user)
+                send_confirmation_code(user.email, confirmation_code)
+                return Response(
+                    {
+                        'message': (
+                            'Пользователь уже существует. '
+                            'Код подтверждения отправлен повторно.'
+                        )
+                    },
+                    status=status.HTTP_200_OK
+                )
+            else:
+                error = {
+                    'email': 'Email не соответствует данному пользователю.'
+                }
+                return Response(error, status=status.HTTP_400_BAD_REQUEST)
         serializer.is_valid(raise_exception=True)
-        user, _ = User.objects.get_or_create(**serializer.validated_data)
+        user = User.objects.create(**serializer.validated_data)
         confirmation_code = default_token_generator.make_token(user)
-        send_mail(
-            subject='Код подтверждения',
-            message=f'Ваш код подтверждения: {confirmation_code}',
-            from_email=EMAIL_YAMDB,
-            recipient_list=(user.email, ),
-            fail_silently=False,
-        )
+        send_confirmation_code(user.email, confirmation_code)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -101,6 +120,7 @@ class TokenCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     queryset = User.objects.all()
     serializer_class = TokenCreateSerializer
+    permission_classes = (permissions.AllowAny, )
 
     def create(self, request):
         """Генерация токена на основе кода подтверждения."""
@@ -122,6 +142,7 @@ class BaseViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['name', 'slug']
     search_fields = ('name', 'slug')
+    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous, )
 
 
 class CategoryViewSet(BaseViewSet):
@@ -140,6 +161,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['name', 'year', 'category', 'genre']
     search_fields = ('name', 'year', 'category', 'genre')
+    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous, )
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

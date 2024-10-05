@@ -5,7 +5,7 @@ from rest_framework.validators import UniqueValidator
 
 from users.models import User
 from reviews.models import Category, Genre, Title, Review, Comment
-from api_yamdb.constant import (
+from api_yamdb.constants import (
     MAX_LENGTH_EMAIL, MAX_LENGTH_NAME
 )
 
