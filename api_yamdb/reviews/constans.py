@@ -1,2 +1,5 @@
 MAX_LENGTH: int = 256
-LIMIT_LENGTH: int = 5
+LIMIT_LENGTH: int = 50
+
+MIN_SCORE_VALUE: int = 1
+MAX_SCORE_VALUE: int = 10

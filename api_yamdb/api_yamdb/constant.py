@@ -1,0 +1,11 @@
+MAX_LENGTH: int = 256
+LIMIT_LENGTH: int = 50
+
+MIN_SCORE_VALUE: int = 1
+MAX_SCORE_VALUE: int = 10
+
+MAX_LENGTH_NAME: int = 150
+MAX_LENGTH_EMAIL: int = 254
+MAX_LENGTH_ROLE: int = 20
+
+NOT_SAFE_METHODS: list = ['create', 'update', 'partial_update', 'destroy']

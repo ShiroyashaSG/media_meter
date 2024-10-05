@@ -1,10 +1,31 @@
 from django.contrib import admin
 
-from .models import Category, Genre, Title
+from .models import Category, Comment, Genre, Review, Title
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    """Админ модель отзыва."""
+    list_display = ('id', 'title', 'author_id', 'score', 'pub_date')
+    search_fields = ('title__name', 'author_id')
+    list_filter = ('score', 'pub_date')
+    ordering = ['-pub_date']
+    verbose_name = 'Отзыв'
+    verbose_name_plural = 'Отзывы'
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    """Админ модель комментария."""
+    list_display = ('id', 'review', 'author', 'text', 'pub_date')
+    search_fields = ('review__title', 'author__username')
+    list_filter = ('pub_date',)
+    verbose_name = 'Комментарий'
+    verbose_name_plural = 'Комментарии'
 
 
 class BaseAdmin(admin.ModelAdmin):
-    '''Базовая админ модель.'''
+    """Базовая админ модель."""
     list_display = ('name', 'slug')
     search_fields = ('name',)
     prepopulated_fields = {'slug': ('name',)}
@@ -12,7 +33,7 @@ class BaseAdmin(admin.ModelAdmin):
 
 @admin.register(Title)
 class TitleAdmin(admin.ModelAdmin):
-    '''Админ модель произведения'''
+    """Админ модель произведения."""
 
     list_display = ('name', 'year', 'category')
     search_fields = ('name',)
@@ -24,7 +45,7 @@ class TitleAdmin(admin.ModelAdmin):
 
 @admin.register(Genre)
 class GenreAdmin(BaseAdmin):
-    '''Админ модель жанра.'''
+    """Админ модель жанра."""
     verbose_name = 'Жанр'
     verbose_name_plural = 'Жанры'
 
