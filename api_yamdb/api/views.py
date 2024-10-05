@@ -1,13 +1,126 @@
-from rest_framework import viewsets, filters
-from reviews.models import Review, Comment, Category, Genre, Title
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework import viewsets, permissions, status, filters, mixins
+
+from users.models import User
+from reviews.models import Review, Comment, Category, Genre, Title
+from .serializers import (
+    UserCreateSerializer, TokenCreateSerializer, UserSerializer,
+    CategorySerializer, GenreSerializer, TitleSerializer,
+    ReviewSerializer, CommentSerializer
+)
 from .permissions import (IsModeratorOrOwner, IsAdminOrReadOnly,
                           CanCreateReview)
 
-from .serializers import (ReviewSerializer, CommentSerializer,
-                          CategorySerializer, GenreSerializer, TitleSerializer)
-from reviews.models import Title
-from django_filters.rest_framework import DjangoFilterBackend
+
+class UserViewSet(viewsets.ModelViewSet):
+    """Представление для взаимодействия с пользователем, создание
+    пользователя администратором, удаление/изменение/получение пользователя.
+    """
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    filter_backends = (filters.SearchFilter, )
+    search_fields = ('username', )
+
+    @action(
+        detail=False,
+        methods=['get', 'patch', 'delete'],
+        url_path=r'(?P<username>[\w.@+-]+)'
+    )
+    def user_by_username(self, request, username):
+        """Изменение данных учетной записи конкретного пользователя."""
+
+        user = get_object_or_404(User, username=username)
+        if request.method == 'PATCH':
+            serializer = UserSerializer(user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        elif request.method == 'DELETE':
+            user.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=['get', 'patch'],
+        url_path='me'
+    )
+    def user_by_me(self, request):
+        """Изменение данных своей учетной записи."""
+
+        if request.method == 'PATCH':
+            serializer = UserSerializer(
+                request.user, data=request.data, partial=True,
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """Представление для работы с пользователем, создание пользователя
+    самостоятельно.
+    """
+
+    queryset = User.objects.all()
+    serializer_class = UserCreateSerializer
+
+    def create(self, request):
+        """Создание пользователя и генерация кода поддтверждения
+        через email.
+        """
+
+        serializer = UserCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user, _ = User.objects.get_or_create(**serializer.validated_data)
+        # Тут будет отправка токена сообщением
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TokenCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """Представление для работы с токеном."""
+
+    queryset = User.objects.all()
+    serializer_class = TokenCreateSerializer
+
+    def create(self, request):
+        """Генерация токена на основе кода подтверждения."""
+
+        # Тут будет проверка токена.
+        message = "Тут будет токен"
+        return Response(message, status=status.HTTP_200_OK)
+
+
+class BaseViewSet(viewsets.ModelViewSet):
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['name', 'slug']
+    search_fields = ('name', 'slug')
+
+
+class CategoryViewSet(BaseViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class GenreViewSet(BaseViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['name', 'year', 'category', 'genre']
+    search_fields = ('name', 'year', 'category', 'genre')
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -62,26 +175,3 @@ class CommentViewSet(viewsets.ModelViewSet):
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id)
         serializer.save(author=self.request.user, review=review)
-
-class BaseViewSet(viewsets.ModelViewSet):
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['name', 'slug']
-    search_fields = ('name', 'slug')
-
-
-class CategoryViewSet(BaseViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-
-
-class GenreViewSet(BaseViewSet):
-    queryset = Genre.objects.all()
-    serializer_class = GenreSerializer
-
-
-class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitleSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['name', 'year', 'category', 'genre']
-    search_fields = ('name', 'year', 'category', 'genre')
