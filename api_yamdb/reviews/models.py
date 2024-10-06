@@ -4,15 +4,16 @@ from django.core.validators import (MinValueValidator, MaxValueValidator,
                                     RegexValidator)
 
 from django.utils import timezone
-from .constans import (LIMIT_LENGTH, MAX_LENGTH, MIN_SCORE_VALUE,
-                       MAX_SCORE_VALUE)
+from api_yamdb.constants import (
+    LIMIT_LENGTH, MAX_LENGTH, MIN_SCORE_VALUE, MAX_SCORE_VALUE
+)
 
 
 User = get_user_model()
 
 
 class BaseModel(models.Model):
-    '''Базовая модель.'''
+    """Базовая модель."""
     name = models.CharField(max_length=MAX_LENGTH, verbose_name='Название')
     slug = models.SlugField(
         max_length=LIMIT_LENGTH,
@@ -33,21 +34,21 @@ class BaseModel(models.Model):
 
 
 class Genre(BaseModel):
-    '''Модель жанра.'''
+    """Модель жанра."""
     class Meta:
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
 
 class Category(BaseModel):
-    '''Модель категории.'''
+    """Модель категории."""
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
 class Title(models.Model):
-    '''Модель произведения.'''
+    """Модель произведения."""
     name = models.CharField(max_length=MAX_LENGTH, verbose_name='Название')
     year = models.PositiveIntegerField(
         verbose_name='Год выпуска',
