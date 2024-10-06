@@ -5,6 +5,7 @@ import pandas
 from django.core.management import BaseCommand
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
+from django.conf import settings
 
 
 class Command(BaseCommand):
@@ -19,9 +20,8 @@ class Command(BaseCommand):
         self.import_genre_title()
 
     def import_genres(self):
-        df = pandas.read_csv(
-            'D:/Dev/api_yamdb-develop/api_yamdb/static/data/genre.csv'
-        )
+        data_path = os.path.join(settings.BASE_DIR, 'static/data/genre.csv')
+        df = pandas.read_csv(data_path)
         for _, row in df.iterrows():
             genre, created = Genre.objects.get_or_create(
                 name=row['name'],
@@ -35,9 +35,8 @@ class Command(BaseCommand):
                 self.stdout.write(f'Жанр "{genre.name}" уже существует.')
 
     def import_categories(self, *args, **kwargs):
-        df = pandas.read_csv(
-            'D:/Dev/api_yamdb-develop/api_yamdb/static/data/category.csv'
-        )
+        data_path = os.path.join(settings.BASE_DIR, 'static/data/category.csv')
+        df = pandas.read_csv(data_path)
         for _, row in df.iterrows():
             category, created = Category.objects.get_or_create(
                 id=row['id'],
@@ -54,9 +53,8 @@ class Command(BaseCommand):
                 )
 
     def import_titles(self):
-        df = pandas.read_csv(
-            'D:/Dev/api_yamdb-develop/api_yamdb/static/data/titles.csv'
-        )
+        data_path = os.path.join(settings.BASE_DIR, 'static/data/titles.csv')
+        df = pandas.read_csv(data_path)
 
         for _, row in df.iterrows():
             category_id = row['category']
@@ -76,9 +74,8 @@ class Command(BaseCommand):
                 )
 
     def import_users(self):
-        df = pandas.read_csv(
-            'D:/Dev/api_yamdb-develop/api_yamdb/static/data/users.csv'
-        )
+        data_path = os.path.join(settings.BASE_DIR, 'static/data/users.csv')
+        df = pandas.read_csv(data_path)
         for _, row in df.iterrows():
             user, created = User.objects.get_or_create(
                 id=row['id'],
@@ -101,9 +98,8 @@ class Command(BaseCommand):
                 )
 
     def import_reviews(self):
-        df = pandas.read_csv(
-            'D:/Dev/api_yamdb-develop/api_yamdb/static/data/review.csv'
-        )
+        data_path = os.path.join(settings.BASE_DIR, 'static/data/review.csv')
+        df = pandas.read_csv(data_path)
         for _, row in df.iterrows():
             author_id = row['author']
             user = User.objects.get(id=author_id)
@@ -125,9 +121,8 @@ class Command(BaseCommand):
                 )
 
     def import_comments(self):
-        df = pandas.read_csv(
-            'D:/Dev/api_yamdb-develop/api_yamdb/static/data/comments.csv'
-        )
+        data_path = os.path.join(settings.BASE_DIR, 'static/data/comments.csv')
+        df = pandas.read_csv(data_path)
         for _, row in df.iterrows():
             author_id = row['author']
             user = User.objects.get(id=author_id)
@@ -151,9 +146,10 @@ class Command(BaseCommand):
                 )
 
     def import_genre_title(self):
-        df = pandas.read_csv(
-            'D:/Dev/api_yamdb-develop/api_yamdb/static/data/genre_title.csv'
+        data_path = os.path.join(
+            settings.BASE_DIR, 'static/data/genre_title.csv'
         )
+        df = pandas.read_csv(data_path)
         for _, row in df.iterrows():
             # Проверяем существование title и genre перед созданием связи
             try:
