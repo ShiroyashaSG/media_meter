@@ -15,7 +15,8 @@ from .serializers import (
 )
 from .permissions import (
     IsAnonymous, IsAuthor, IsModerator, IsSuperUserOrIsAdmin,
-    IsAdminOrReadOnly, IsModeratorOrOwner, CanCreateReview
+    IsAdminOrReadOnly, IsModeratorOrOwner, CanCreateReview,
+    IsOwnerOrModeratorOrAdmin
 )
 from .utils import send_confirmation_code
 
@@ -173,12 +174,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.request.method == 'POST':
             self.permission_classes = (CanCreateReview,)
-        # Для PATCH и DELETE разрешаем доступ автору, модератору или админу
         elif self.request.method in ['PATCH', 'DELETE']:
             self.permission_classes = (
-                IsModeratorOrOwner,
-                IsAdminOrReadOnly
+                IsOwnerOrModeratorOrAdmin,
             )
+        elif self.request.method == 'GET':
+            self.permission_classes = (IsAnonymous,)
         return super().get_permissions()
 
     def get_queryset(self):
@@ -189,6 +190,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
+
 
 class CommentViewSet(viewsets.ModelViewSet):
     """
@@ -197,15 +203,14 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
 
     def get_permissions(self):
-        # Для POST-запросов используем пермишен для создания комментариев
         if self.request.method == 'POST':
             self.permission_classes = (CanCreateReview,)
-        # Для PATCH и DELETE разрешаем доступ автору, модератору или админу
         elif self.request.method in ['PATCH', 'DELETE']:
             self.permission_classes = (
-                IsModeratorOrOwner,
-                IsAdminOrReadOnly
+                IsOwnerOrModeratorOrAdmin,
             )
+        elif self.request.method == 'GET':
+            self.permission_classes = (IsAnonymous,)
         return super().get_permissions()
 
     def get_queryset(self):
@@ -214,6 +219,10 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         review_id = self.kwargs.get('review_id')
-
         review = get_object_or_404(Review, id=review_id)
         serializer.save(author=self.request.user, review=review)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)

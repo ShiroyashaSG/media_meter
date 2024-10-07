@@ -1,6 +1,21 @@
 from rest_framework import permissions
 
 
+class IsOwnerOrModeratorOrAdmin(permissions.BasePermission):
+    """
+    Разрешает редактирование и удаление только владельцам,
+    модераторам и администраторам.
+    """
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_authenticated and (
+            request.user.is_moderator
+            or request.user.is_admin
+            or obj.author == request.user
+        )
+
+
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
     Разрешает доступ только администраторам, остальные могут только читать.
