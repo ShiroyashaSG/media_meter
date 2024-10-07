@@ -2,10 +2,10 @@ import csv
 import os
 
 import pandas
+from django.conf import settings
 from django.core.management import BaseCommand
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
-from django.conf import settings
 
 
 class Command(BaseCommand):
