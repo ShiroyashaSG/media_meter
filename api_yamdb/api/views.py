@@ -214,6 +214,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
+        title_id = self.kwargs.get('title_id')
+        get_object_or_404(Title, id=title_id)
         review_id = self.kwargs.get('review_id')
         return Comment.objects.filter(review_id=review_id)
 
