@@ -117,14 +117,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'text', 'author', 'score', 'pub_date']
-        # validators = [
-        #     UniqueTogetherValidator(
-        #         queryset=Review.objects.all(),
-        #         fields=['author', 'title'],
-        #         message='На одно произведение пользователь '
-        #         'может оставить только один отзыв.'
-        #     )
-        # ]
 
     def validate_score(self, value):
         if value < 1 or value > 10:
@@ -135,8 +127,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context['request']
-        title_id = self.context['view'].kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
+        title = self.context.get('title')
 
         if (
             request.method == 'POST'
