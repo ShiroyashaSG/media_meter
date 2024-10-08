@@ -3,11 +3,11 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
+from rest_framework.validators import UniqueValidator
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
-from reviews.models import Category, Genre, Title, Review, Comment
-from api_yamdb.constants import (
-    MAX_LENGTH_EMAIL, MAX_LENGTH_NAME
-)
+
+from api_yamdb.constants import MAX_LENGTH_EMAIL, MAX_LENGTH_NAME
 
 
 class UserMixin:
@@ -83,25 +83,41 @@ class TokenCreateSerializer(serializers.Serializer):
 
 
 class GenreSerializer(serializers.ModelSerializer):
-
+    """Сериализатор жанра."""
     class Meta:
         model = Genre
-        fields = ('id', 'name', 'slug')
+        fields = ('name', 'slug')
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
+    """Сериализатор категории."""
     class Meta:
         model = Category
-        fields = ('id', 'name', 'slug')
+        fields = ('name', 'slug')
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleReadSerializer(serializers.ModelSerializer):
+    """Сериализатор произведения для чтения."""
+    genre = GenreSerializer(many=True)
+    category = CategorySerializer()
+
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category',
+        )
+
+
+class TitleWriteSerializer(serializers.ModelSerializer):
+    """Сериализатор произведения для записи."""
     genre = serializers.SlugRelatedField(
-        many=True, slug_field='slug', queryset=Genre.objects.all()
+        many=True,
+        slug_field='slug',
+        queryset=Genre.objects.all()
     )
     category = serializers.SlugRelatedField(
-        slug_field='slug', queryset=Category.objects.all()
+        slug_field='slug',
+        queryset=Category.objects.all()
     )
 
     class Meta:

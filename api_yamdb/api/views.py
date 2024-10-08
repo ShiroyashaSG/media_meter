@@ -1,23 +1,24 @@
-from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.response import Response
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework import viewsets, permissions, status, filters, mixins
-
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
 from reviews.models import Review, Comment, Category, Genre, Title
-from .serializers import (
-    UserCreateSerializer, TokenCreateSerializer, UserSerializer,
-    CategorySerializer, GenreSerializer, TitleSerializer,
-    ReviewSerializer, CommentSerializer
-)
-from .permissions import (
-    IsAnonymous, IsAuthor, IsModerator, IsSuperUserOrIsAdmin,
-    IsAdminOrReadOnly, IsModeratorOrOwner, CanCreateReview,
-    IsOwnerOrModeratorOrAdmin
-)
+
+from .paginations import CategoryPagination, GenrePagination
+from .permissions import (CanCreateReview, IsAdminOrReadOnly, IsAnonymous,
+                          IsAuthor, IsModerator, IsModeratorOrOwner,
+                          IsSuperUserOrIsAdmin, IsOwnerOrModeratorOrAdmin)
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, ReviewSerializer,
+                          TitleReadSerializer, TitleWriteSerializer,
+                          TokenCreateSerializer, UserCreateSerializer,
+                          UserSerializer)
+
 from .utils import send_confirmation_code
 
 
@@ -139,30 +140,78 @@ class TokenCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response(message, status=status.HTTP_200_OK)
 
 
-class BaseViewSet(viewsets.ModelViewSet):
+class BaseViewSet(
+        mixins.DestroyModelMixin,
+        mixins.CreateModelMixin,
+        mixins.ListModelMixin,
+        viewsets.GenericViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['name', 'slug']
-    search_fields = ('name', 'slug')
-    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous, )
+    search_fields = ('name', 'slug',)
+    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous,)
+    lookup_field = 'slug'
 
 
 class CategoryViewSet(BaseViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.all().order_by('slug')
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(BaseViewSet):
-    queryset = Genre.objects.all()
+    queryset = Genre.objects.all().order_by('slug')
     serializer_class = GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitleSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['name', 'year', 'category', 'genre']
-    search_fields = ('name', 'year', 'category', 'genre')
-    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous, )
+    queryset = Title.objects.all().order_by('name')
+    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous,)
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
+    filterset_fields = ('category__slug', 'genre__slug', 'name', 'year')
+    search_fields = ('category__slug', 'genre__slug', 'name', 'year',)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if 'genre' in self.request.query_params:
+            self.pagination_class = GenrePagination
+        elif 'category' in self.request.query_params:
+            self.pagination_class = CategoryPagination
+        return queryset
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
+
+    def get_serializer_class(self):
+        if self.request.method in ['POST', 'PATCH']:
+            return TitleWriteSerializer
+        return TitleReadSerializer
+
+
+class BaseTitleReviewViewSet(viewsets.ModelViewSet):
+    """
+    Базовый вьюсет, содержащий общую логику для работы
+    с объектами Title и Review.
+    """
+
+    def get_title(self):
+        """
+        Получает и возвращает объект Title на основе переданного title_id.
+        """
+        title_id = self.kwargs.get('title_id')
+        return get_object_or_404(Title, id=title_id)
+
+    def get_review(self):
+        """
+        Получает и возвращает объект Review на основе переданного review_id.
+        """
+        review_id = self.kwargs.get('review_id')
+        return get_object_or_404(Review, id=review_id)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
 
 
 class BaseTitleReviewViewSet(viewsets.ModelViewSet):
@@ -227,6 +276,11 @@ class ReviewViewSet(BaseTitleReviewViewSet):
     отзывов.
     """
     serializer_class = ReviewSerializer
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
 
     def get_permissions(self):
         """

@@ -1,13 +1,12 @@
-from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import (MinValueValidator, MaxValueValidator,
+from django.core.validators import (MaxValueValidator, MinValueValidator,
                                     RegexValidator)
-
+from django.db import models
+from django.db.models import Avg
 from django.utils import timezone
-from api_yamdb.constants import (
-    LIMIT_LENGTH, MAX_LENGTH, MIN_SCORE_VALUE, MAX_SCORE_VALUE
-)
 
+from api_yamdb.constants import (LIMIT_LENGTH, MAX_LENGTH, MAX_SCORE_VALUE,
+                                 MIN_SCORE_VALUE)
 
 User = get_user_model()
 
@@ -35,6 +34,7 @@ class BaseModel(models.Model):
 
 class Genre(BaseModel):
     """Модель жанра."""
+
     class Meta:
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
@@ -42,6 +42,7 @@ class Genre(BaseModel):
 
 class Category(BaseModel):
     """Модель категории."""
+
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
@@ -67,6 +68,10 @@ class Title(models.Model):
         null=True,
         related_name='titles'
     )
+
+    @property
+    def rating(self):
+        return self.reviews.aggregate(Avg('score'))['score__avg']
 
     def str(self):
         return self.name
