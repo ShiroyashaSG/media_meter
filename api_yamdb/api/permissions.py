@@ -25,6 +25,7 @@ class IsOwnerOrModeratorOrAdmin(permissions.BasePermission):
             bool: True, если пользователь является владельцем, модератором или
             администратором; иначе False.
         """
+    def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_authenticated and (
@@ -114,7 +115,7 @@ class CanCreateReview(permissions.BasePermission):
 
 
 class IsAnonymous(permissions.BasePermission):
-    """Разрешение, позволяющее просматривать просматривать
+    """Разрешение, позволяющее просматривать
     данные анонимному пользователю.
     """
 
@@ -139,14 +140,12 @@ class IsModerator(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        # Доступ разрешён только аутентифицированным пользователям с правами суперпользователя, администратора или сотрудника
         return (
             request.user.is_authenticated
             and request.user.is_moderator
         )
 
     def has_object_permission(self, request, view, obj):
-        # Проверка на уровне объекта, что пользователь суперпользователь, администратор или сотрудник
         return self.has_permission(request, view)
 
 
@@ -155,7 +154,6 @@ class IsSuperUserOrIsAdmin(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        # Доступ разрешён только аутентифицированным пользователям с правами суперпользователя, администратора или сотрудника
         return (
             request.user.is_authenticated
             and (
@@ -166,5 +164,4 @@ class IsSuperUserOrIsAdmin(permissions.BasePermission):
         )
 
     def has_object_permission(self, request, view, obj):
-        # Проверка на уровне объекта, что пользователь суперпользователь, администратор или сотрудник
         return self.has_permission(request, view)

@@ -168,3 +168,4 @@ _Ответ:_
 Проект лицензирован под лицензией `MIT`.
 
 ![Тут место Альтрона](https://github.com/user-attachments/assets/bbb1c0a7-fe82-4a98-b029-f533760b0908)
+
