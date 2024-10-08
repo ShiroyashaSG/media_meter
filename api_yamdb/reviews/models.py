@@ -77,6 +77,7 @@ class Title(models.Model):
 
 
 class Review(models.Model):
+    """Модель отзыва."""
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -116,6 +117,7 @@ class Review(models.Model):
 
 
 class Comment(models.Model):
+    """Модель комментария."""
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
