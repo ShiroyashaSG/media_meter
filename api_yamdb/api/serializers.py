@@ -59,6 +59,12 @@ class UserSerializer(UserMixin, serializers.ModelSerializer):
         fields = (
             'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
+        validators = [
+            UniqueTogetherValidator(
+                queryset=User.objects.all(),
+                fields=['username', 'email']
+            )
+        ]
 
 
 class UserCreateSerializer(UserMixin, serializers.ModelSerializer):
@@ -67,6 +73,12 @@ class UserCreateSerializer(UserMixin, serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('username', 'email')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=User.objects.all(),
+                fields=['username', 'email']
+            )
+        ]
 
 
 class TokenCreateSerializer(serializers.Serializer):
