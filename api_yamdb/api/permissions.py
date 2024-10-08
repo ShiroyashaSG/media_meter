@@ -3,9 +3,29 @@ from rest_framework import permissions
 
 class IsOwnerOrModeratorOrAdmin(permissions.BasePermission):
     """
-    Разрешает редактирование и удаление только владельцам,
+
+    Класс разрешений, позволяющий редактировать и удалять только владельцам,
     модераторам и администраторам.
+
+    Методы:
+        has_object_permission(request, view, obj):
+            Проверяет, имеет ли пользователь разрешение на редактирование или
+            удаление объекта.
     """
+    def has_object_permission(self, request, view, obj):
+        """
+        Проверяет, имеет ли пользователь разрешение на редактирование или
+        удаление объекта.
+
+        Аргументы:
+            request: Объект запроса.
+            view: Представление, к которому осуществляется доступ.
+            obj: Объект, к которому осуществляется доступ.
+
+        Возвращает:
+            bool: True, если пользователь является владельцем, модератором или
+            администратором; иначе False.
+        """
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -18,9 +38,25 @@ class IsOwnerOrModeratorOrAdmin(permissions.BasePermission):
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
-    Разрешает доступ только администраторам, остальные могут только читать.
+    Класс разрешений, позволяющий доступ только администраторам,
+    в то время как остальные могут только читать.
+
+    Методы:
+        has_permission(request, view):
+            Проверяет, имеет ли пользователь разрешение на выполнение запроса.
     """
     def has_permission(self, request, view):
+        """
+        Проверяет, имеет ли пользователь разрешение на выполнение запроса.
+        
+        Аргументы:
+            request: Объект запроса.
+            view: Представление, к которому осуществляется доступ.
+
+        Возвращает:
+            bool: True, если пользователь является администратором или запрос
+            безопасный; иначе False.
+        """
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_authenticated and request.user.is_admin
@@ -28,9 +64,28 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 
 class IsModeratorOrOwner(permissions.BasePermission):
     """
-    Разрешает редактирование и удаление только модераторам и владельцам.
+    Класс разрешений, позволяющий редактировать и удалять только модераторам
+    и владельцам.
+
+    Методы:
+        has_object_permission(request, view, obj):
+            Проверяет, имеет ли пользователь разрешение на редактирование или
+            удаление объекта.
     """
     def has_object_permission(self, request, view, obj):
+        """
+        Проверяет, имеет ли пользователь разрешение на редактирование или
+        удаление объекта.
+
+        Аргументы:
+            request: Объект запроса.
+            view: Представление, к которому осуществляется доступ.
+            obj: Объект, к которому осуществляется доступ.
+
+        Возвращает:
+            bool: True, если пользователь является модератором или владельцем;
+            иначе False.
+        """
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_authenticated and (
@@ -39,9 +94,24 @@ class IsModeratorOrOwner(permissions.BasePermission):
 
 class CanCreateReview(permissions.BasePermission):
     """
-    Разрешает создание отзыва только аутентифицированным пользователям.
+    Класс разрешений, позволяющий создание отзыва только аутентифицированным
+    пользователям.
+
+    Методы:
+        has_permission(request, view):
+            Проверяет, имеет ли пользователь разрешение на создание отзыва.
     """
     def has_permission(self, request, view):
+        """
+        Проверяет, имеет ли пользователь разрешение на создание отзыва.
+
+        Аргументы:
+            request: Объект запроса.
+            view: Представление, к которому осуществляется доступ.
+
+        Возвращает:
+            bool: True, если пользователь аутентифицирован; иначе False.
+        """
         return request.user.is_authenticated
 
 

@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from rest_framework.validators import UniqueValidator
 from reviews.models import Category, Comment, Genre, Review, Title
@@ -125,6 +126,12 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для модели Review.
+
+    Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности отзыва
+    для каждого произведения (title) от каждого пользователя (author).
+    """
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
@@ -134,6 +141,16 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'author', 'score', 'pub_date']
 
     def validate_score(self, value):
+        """
+        Проверяет, что рейтинг находится в пределах от 1 до 10.
+
+        Args:
+            value (int): Рейтинг отзыва.
+
+        Raises:
+            serializers.ValidationError: Если рейтинг вне допустимого
+            диапазона.
+        """
         if value < 1 or value > 10:
             raise serializers.ValidationError(
                 'Рейтинг должен быть от 1 до 10.'
@@ -141,6 +158,17 @@ class ReviewSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
+        """
+        Проверяет данные перед сохранением, включая уникальность отзыва
+        для текущего произведения и пользователя.
+
+        Args:
+            data (dict): Данные отзыва.
+
+        Raises:
+            serializers.ValidationError: Если отзыв от текущего пользователя
+            на это произведение уже существует.
+        """
         request = self.context['request']
         title = self.context.get('title')
 
@@ -160,6 +188,12 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для модели Comment.
+
+    Обрабатывает данные комментария, включая валидацию на наличие
+    соответствующего отзыва и произведения.
+    """
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
@@ -169,6 +203,17 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'author', 'pub_date']
 
     def validate(self, data):
+        """
+        Проверяет данные перед сохранением, включая наличие отзыва
+        и соответствующего произведения.
+
+        Args:
+            data (dict): Данные комментария.
+
+        Raises:
+            ValidationError: Если отзыв не найден или если произведение
+            не существует.
+        """
         title_id = self.context['view'].kwargs.get('title_id')
         review_id = self.context['view'].kwargs.get('review_id')
         get_object_or_404(Title, id=title_id)

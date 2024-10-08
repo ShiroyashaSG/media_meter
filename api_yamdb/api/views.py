@@ -18,6 +18,7 @@ from .serializers import (CategorySerializer, CommentSerializer,
                           TitleReadSerializer, TitleWriteSerializer,
                           TokenCreateSerializer, UserCreateSerializer,
                           UserSerializer)
+
 from .utils import send_confirmation_code
 
 
@@ -213,9 +214,66 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
 
+class BaseTitleReviewViewSet(viewsets.ModelViewSet):
+    """
+    Базовый вьюсет для работы с объектами Title и Review.
+
+    Содержит общую логику, которая используется в других вьюсетах,
+    связанных с отзывами и произведениями.
+    """
+
+    def get_title(self):
+        """
+        Получает и возвращает объект Title на основе переданного title_id.
+
+        Использует `title_id` из URL-параметров для получения объекта Title.
+        Если объект не найден, возвращает 404 ошибку.
+
+        Returns:
+            Title: Объект Title, соответствующий заданному title_id.
+        """
+        title_id = self.kwargs.get('title_id')
+        return get_object_or_404(Title, id=title_id)
+
+    def get_review(self):
+        """
+        Получает и возвращает объект Review на основе переданного review_id.
+
+        Использует `review_id` из URL-параметров для получения объекта Review.
+        Если объект не найден, возвращает 404 ошибку.
+
+        Returns:
+            Review: Объект Review, соответствующий заданному review_id.
+        """
+        review_id = self.kwargs.get('review_id')
+        return get_object_or_404(Review, id=review_id)
+
+    def update(self, request, *args, **kwargs):
+        """
+        Обрабатывает запросы на обновление объектов.
+
+        Возвращает ошибку 405, если метод запроса - PUT. В противном случае
+        передает управление методу родительского класса.
+
+        Args:
+            request (Request): Объект запроса.
+            *args: Позиционные аргументы.
+            **kwargs: Именованные аргументы.
+
+        Returns:
+            Response: Ответ на запрос.
+        """
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
+
+
 class ReviewViewSet(BaseTitleReviewViewSet):
     """
     Вьюсет для работы с отзывами.
+
+    Предоставляет методы для создания, получения, обновления и удаления
+    отзывов.
     """
     serializer_class = ReviewSerializer
 
@@ -225,6 +283,12 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         return super().update(request, *args, **kwargs)
 
     def get_permissions(self):
+        """
+        Определяет разрешения для методов вьюсета на основе типа запроса.
+
+        Returns:
+            list: Список классов разрешений для данного запроса.
+        """
         if self.request.method == 'POST':
             self.permission_classes = (CanCreateReview,)
         elif self.request.method in ['PATCH', 'DELETE']:
@@ -236,14 +300,34 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
+        """
+        Получает набор отзывов, связанных с конкретным произведением.
+
+        Returns:
+            QuerySet: Набор отзывов, связанных с объектом Title.
+        """
         title = self.get_title()
         return Review.objects.filter(title_id=title.id)
 
     def perform_create(self, serializer):
+        """
+        Сохраняет новый отзыв, устанавливая автора и произведение.
+
+        Args:
+            serializer (Serializer): Сериализатор для создания нового отзыва.
+        """
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
 
     def get_serializer_context(self):
+        """
+        Получает контекст для сериализатора.
+
+        Добавляет объект Title в контекст для доступа в сериализаторе.
+
+        Returns:
+            dict: Контекст для сериализатора.
+        """
         context = super().get_serializer_context()
         context['title'] = self.get_title()
         return context
@@ -252,10 +336,19 @@ class ReviewViewSet(BaseTitleReviewViewSet):
 class CommentViewSet(BaseTitleReviewViewSet):
     """
     Вьюсет для работы с комментариями.
+
+    Предоставляет методы для создания, получения, обновления и удаления
+    комментариев.
     """
     serializer_class = CommentSerializer
 
     def get_permissions(self):
+        """
+        Определяет разрешения для методов вьюсета на основе типа запроса.
+
+        Returns:
+            list: Список классов разрешений для данного запроса.
+        """
         if self.request.method == 'POST':
             self.permission_classes = (CanCreateReview,)
         elif self.request.method in ['PATCH', 'DELETE']:
@@ -267,10 +360,23 @@ class CommentViewSet(BaseTitleReviewViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
+        """
+        Получает набор комментариев, связанных с конкретным отзывом.
+
+        Returns:
+            QuerySet: Набор комментариев, связанных с объектом Review.
+        """
         self.get_title()
         review = self.get_review()
         return Comment.objects.filter(review_id=review.id)
 
     def perform_create(self, serializer):
+        """
+        Сохраняет новый комментарий, устанавливая автора и отзыв.
+
+        Args:
+            serializer (Serializer): Сериализатор для создания нового
+            комментария.
+        """
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
