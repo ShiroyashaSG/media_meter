@@ -1,12 +1,11 @@
 from enum import Enum
 
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import RegexValidator, EmailValidator
+from django.core.validators import EmailValidator, RegexValidator
 from django.db import models
 
-from api_yamdb.constants import (
-    MAX_LENGTH_NAME, MAX_LENGTH_EMAIL, MAX_LENGTH_ROLE
-)
+from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
+                                 MAX_LENGTH_ROLE)
 
 
 class Role(Enum):
