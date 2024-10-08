@@ -138,11 +138,16 @@ class TokenCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response(message, status=status.HTTP_200_OK)
 
 
-class BaseViewSet(viewsets.ModelViewSet):
+class BaseViewSet(
+        mixins.DestroyModelMixin,
+        mixins.CreateModelMixin,
+        mixins.ListModelMixin,
+        viewsets.GenericViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['name', 'slug']
     search_fields = ('name', 'slug',)
-    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous, )
+    permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous,)
+    lookup_field = 'slug'
 
 
 class CategoryViewSet(BaseViewSet):

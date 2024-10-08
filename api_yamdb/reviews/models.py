@@ -34,6 +34,7 @@ class BaseModel(models.Model):
 
 class Genre(BaseModel):
     """Модель жанра."""
+
     class Meta:
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
@@ -41,6 +42,7 @@ class Genre(BaseModel):
 
 class Category(BaseModel):
     """Модель категории."""
+
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
