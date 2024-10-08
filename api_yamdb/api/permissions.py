@@ -3,7 +3,6 @@ from rest_framework import permissions
 
 class IsOwnerOrModeratorOrAdmin(permissions.BasePermission):
     """
-
     Класс разрешений, позволяющий редактировать и удалять только владельцам,
     модераторам и администраторам.
 
