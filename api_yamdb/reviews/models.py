@@ -106,9 +106,13 @@ class Review(models.Model):
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
 
     class Meta:
-        # Один отзыв от пользователя на одно произведение
-        unique_together = ('author', 'title')
-        ordering = ['-pub_date']  # Упорядочивание по дате публикации
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'title'],
+                name='unique_author_title'
+            )
+        ]
+        ordering = ['-pub_date']
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
 

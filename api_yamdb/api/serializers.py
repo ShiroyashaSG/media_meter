@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+
 from rest_framework.validators import UniqueValidator
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
@@ -141,16 +142,19 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context['request']
-        title_id = self.context['view'].kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
+        title = self.context.get('title')
 
-        # Проверяем, оставил ли пользователь уже отзыв на это произведение
-        if Review.objects.filter(title=title.id, author=request.user).exists():
+        if (
+            request.method == 'POST'
+            and Review.objects.filter(
+                title=title.id,
+                author=request.user
+            ).exists()
+        ):
             raise serializers.ValidationError(
                 'Вы уже оставили отзыв на это произведение.'
             )
 
-        # Присваиваем title, чтобы сохранить его позже
         data['title'] = title
         return data
 
@@ -162,10 +166,12 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'review', 'author', 'text', 'pub_date']
+        fields = ['id', 'text', 'author', 'pub_date']
 
     def validate(self, data):
+        title_id = self.context['view'].kwargs.get('title_id')
         review_id = self.context['view'].kwargs.get('review_id')
+        get_object_or_404(Title, id=title_id)
         if not Review.objects.filter(id=review_id).exists():
             raise ValidationError("Отзыв не найден.")
         return data

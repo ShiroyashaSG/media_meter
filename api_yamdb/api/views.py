@@ -7,11 +7,12 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
+from reviews.models import Review, Comment, Category, Genre, Title
 
 from .paginations import CategoryPagination, GenrePagination
 from .permissions import (CanCreateReview, IsAdminOrReadOnly, IsAnonymous,
                           IsAuthor, IsModerator, IsModeratorOrOwner,
-                          IsSuperUserOrIsAdmin)
+                          IsSuperUserOrIsAdmin, IsOwnerOrModeratorOrAdmin)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer,
                           TitleReadSerializer, TitleWriteSerializer,
@@ -186,7 +187,33 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleReadSerializer
 
 
-class ReviewViewSet(viewsets.ModelViewSet):
+class BaseTitleReviewViewSet(viewsets.ModelViewSet):
+    """
+    Базовый вьюсет, содержащий общую логику для работы
+    с объектами Title и Review.
+    """
+
+    def get_title(self):
+        """
+        Получает и возвращает объект Title на основе переданного title_id.
+        """
+        title_id = self.kwargs.get('title_id')
+        return get_object_or_404(Title, id=title_id)
+
+    def get_review(self):
+        """
+        Получает и возвращает объект Review на основе переданного review_id.
+        """
+        review_id = self.kwargs.get('review_id')
+        return get_object_or_404(Review, id=review_id)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
+
+
+class ReviewViewSet(BaseTitleReviewViewSet):
     """
     Вьюсет для работы с отзывами.
     """
@@ -200,52 +227,50 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.request.method == 'POST':
             self.permission_classes = (CanCreateReview,)
-        # Для PATCH и DELETE разрешаем доступ автору, модератору или админу
         elif self.request.method in ['PATCH', 'DELETE']:
             self.permission_classes = (
-                IsModeratorOrOwner,
-                IsAdminOrReadOnly
+                IsOwnerOrModeratorOrAdmin,
             )
         elif self.request.method == 'GET':
             self.permission_classes = (IsAnonymous,)
         return super().get_permissions()
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        get_object_or_404(Title, id=title_id)
-        return Review.objects.filter(title_id=title_id)
+        title = self.get_title()
+        return Review.objects.filter(title_id=title.id)
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        title = self.get_title()
+        serializer.save(author=self.request.user, title=title)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['title'] = self.get_title()
+        return context
 
 
-class CommentViewSet(viewsets.ModelViewSet):
+class CommentViewSet(BaseTitleReviewViewSet):
     """
     Вьюсет для работы с комментариями.
     """
     serializer_class = CommentSerializer
 
     def get_permissions(self):
-        # Для POST-запросов используем пермишен для создания комментариев
         if self.request.method == 'POST':
             self.permission_classes = (CanCreateReview,)
-        # Для PATCH и DELETE разрешаем доступ автору, модератору или админу
         elif self.request.method in ['PATCH', 'DELETE']:
             self.permission_classes = (
-                IsModeratorOrOwner,
-                IsAdminOrReadOnly
+                IsOwnerOrModeratorOrAdmin,
             )
         elif self.request.method == 'GET':
             self.permission_classes = (IsAnonymous,)
-
         return super().get_permissions()
 
     def get_queryset(self):
-        review_id = self.kwargs.get('review_id')
-        return Comment.objects.filter(review_id=review_id)
+        self.get_title()
+        review = self.get_review()
+        return Comment.objects.filter(review_id=review.id)
 
     def perform_create(self, serializer):
-        review_id = self.kwargs.get('review_id')
-
-        review = get_object_or_404(Review, id=review_id)
+        review = self.get_review()
         serializer.save(author=self.request.user, review=review)
