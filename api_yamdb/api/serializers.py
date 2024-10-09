@@ -39,6 +39,15 @@ class UserMixin:
         ]
     )
 
+    class Meta:
+        model = User
+        validators = [
+            UniqueTogetherValidator(
+                queryset=User.objects.all(),
+                fields=['username', 'email']
+            )
+        ]
+
     def validate_username(self, username):
         """Влидация поля username на доступность использования 'me' в качестве
         username пользователя.
@@ -55,7 +64,6 @@ class UserSerializer(UserMixin, serializers.ModelSerializer):
     """Сериализатор пользователя, регистрируемого администратором."""
 
     class Meta:
-        model = User
         fields = (
             'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
@@ -65,7 +73,6 @@ class UserCreateSerializer(UserMixin, serializers.ModelSerializer):
     """Сериализатор пользователя, регистрируемого самостоятельно."""
 
     class Meta:
-        model = User
         fields = ('username', 'email')
 
 

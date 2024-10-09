@@ -10,9 +10,8 @@ from users.models import User
 from reviews.models import Review, Comment, Category, Genre, Title
 
 from .paginations import CategoryPagination, GenrePagination
-from .permissions import (CanCreateReview, IsAdminOrReadOnly, IsAnonymous,
-                          IsAuthor, IsModerator, IsModeratorOrOwner,
-                          IsSuperUserOrIsAdmin, IsOwnerOrModeratorOrAdmin)
+from .permissions import (IsAnonymous, IsAuthor, IsModerator,
+                          IsSuperUserOrIsAdmin)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer,
                           TitleReadSerializer, TitleWriteSerializer,
@@ -89,27 +88,37 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         через email.
         """
         serializer = UserCreateSerializer(data=request.data)
-        user = User.objects.filter(
+        user_username = User.objects.filter(
             username=request.data.get('username')
         ).first()
-        if user:
-            if user.email == serializer.initial_data.get('email'):
-                confirmation_code = default_token_generator.make_token(user)
-                send_confirmation_code(user.email, confirmation_code)
+        user_email = User.objects.filter(
+            email=request.data.get('email')
+        ).first()
+        if user_username:
+            if user_username.email == serializer.initial_data.get('email'):
+                confirmation_code = default_token_generator.make_token(
+                    user_username
+                )
+                send_confirmation_code(user_username.email, confirmation_code)
                 return Response(
                     {
-                        'message': (
-                            'Пользователь уже существует. '
-                            'Код подтверждения отправлен повторно.'
-                        )
+                        'email': user_username.email,
+                        'username': user_username.username
                     },
                     status=status.HTTP_200_OK
                 )
-            else:
-                error = {
-                    'email': 'Email не соответствует данному пользователю.'
-                }
-                return Response(error, status=status.HTTP_400_BAD_REQUEST)
+            elif user_email:
+                return Response(
+                    {
+                        'email': [
+                            user_email.email
+                        ],
+                        'username': [
+                            user_username.username
+                        ]
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         serializer.is_valid(raise_exception=True)
         user = User.objects.create(**serializer.validated_data)
         confirmation_code = default_token_generator.make_token(user)
@@ -223,35 +232,6 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
         return get_object_or_404(Review, id=review_id)
 
     def update(self, request, *args, **kwargs):
-        """
-        Обрабатывает запросы на обновление объектов.
-
-        Возвращает ошибку 405, если метод запроса - PUT. В противном случае
-        передает управление методу родительского класса.
-
-        Args:
-            request (Request): Объект запроса.
-            *args: Позиционные аргументы.
-            **kwargs: Именованные аргументы.
-
-        Returns:
-            Response: Ответ на запрос.
-        """
-        if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().update(request, *args, **kwargs)
-
-
-class ReviewViewSet(BaseTitleReviewViewSet):
-    """
-    Вьюсет для работы с отзывами.
-
-    Предоставляет методы для создания, получения, обновления и удаления
-    отзывов.
-    """
-    serializer_class = ReviewSerializer
-
-    def update(self, request, *args, **kwargs):
         if request.method == 'PUT':
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
@@ -263,15 +243,25 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         Returns:
             list: Список классов разрешений для данного запроса.
         """
-        if self.request.method == 'POST':
-            self.permission_classes = (CanCreateReview,)
+        if self.request.method in ['POST', 'PUT']:
+            permission_classes = [permissions.IsAuthenticated]
         elif self.request.method in ['PATCH', 'DELETE']:
-            self.permission_classes = (
-                IsOwnerOrModeratorOrAdmin,
-            )
-        elif self.request.method == 'GET':
-            self.permission_classes = (IsAnonymous,)
-        return super().get_permissions()
+            permission_classes = [
+                IsAuthor | IsModerator | IsSuperUserOrIsAdmin
+            ]
+        else:
+            permission_classes = [IsAnonymous]
+        return [permission() for permission in permission_classes]
+
+
+class ReviewViewSet(BaseTitleReviewViewSet):
+    """
+    Вьюсет для работы с отзывами.
+
+    Предоставляет методы для создания, получения, обновления и удаления
+    отзывов.
+    """
+    serializer_class = ReviewSerializer
 
     def get_queryset(self):
         """
@@ -315,23 +305,6 @@ class CommentViewSet(BaseTitleReviewViewSet):
     комментариев.
     """
     serializer_class = CommentSerializer
-
-    def get_permissions(self):
-        """
-        Определяет разрешения для методов вьюсета на основе типа запроса.
-
-        Returns:
-            list: Список классов разрешений для данного запроса.
-        """
-        if self.request.method == 'POST':
-            self.permission_classes = (CanCreateReview,)
-        elif self.request.method in ['PATCH', 'DELETE']:
-            self.permission_classes = (
-                IsOwnerOrModeratorOrAdmin,
-            )
-        elif self.request.method == 'GET':
-            self.permission_classes = (IsAnonymous,)
-        return super().get_permissions()
 
     def get_queryset(self):
         """

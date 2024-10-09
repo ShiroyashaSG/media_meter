@@ -1,7 +1,7 @@
 from enum import Enum
 
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import EmailValidator, RegexValidator
+from django.core.validators import RegexValidator
 from django.db import models
 
 from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
@@ -65,6 +65,12 @@ class User(AbstractUser):
         verbose_name = 'пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ('id', )
+        constraints = [
+            models.UniqueConstraint(
+                fields=['username', 'email'],
+                name='user_email'
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.username
