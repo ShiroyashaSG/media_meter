@@ -20,6 +20,8 @@ from .serializers import (CategorySerializer, CommentSerializer,
 
 from .utils import send_confirmation_code
 
+from rest_framework.exceptions import NotFound
+
 
 class UserViewSet(viewsets.ModelViewSet):
     """Представление для взаимодействия с пользователем, создание
@@ -253,6 +255,29 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAnonymous]
         return [permission() for permission in permission_classes]
 
+    def get_serializer_context(self):
+        """
+        Получает контекст для сериализатора, включая объекты Title и Review.
+
+        Метод расширяет стандартный контекст сериализатора, добавляя в него
+        объекты Title и Review, которые могут быть использованы в дальнейшем
+        для валидации данных в сериализаторе.
+
+        Returns:
+            dict: Контекст, содержащий объекты Title и Review.
+
+        Raises:
+            Http404: Если произведение (Title) или отзыв (Review) не найдены.
+        """
+        context = super().get_serializer_context()
+        context['title'] = self.get_title()
+
+        # Если отзыв существует, добавляем его в контекст
+        if 'review_id' in self.kwargs:
+            context['review'] = self.get_review()
+
+        return context
+
 
 class ReviewViewSet(BaseTitleReviewViewSet):
     """
@@ -282,19 +307,6 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         """
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
-
-    def get_serializer_context(self):
-        """
-        Получает контекст для сериализатора.
-
-        Добавляет объект Title в контекст для доступа в сериализаторе.
-
-        Returns:
-            dict: Контекст для сериализатора.
-        """
-        context = super().get_serializer_context()
-        context['title'] = self.get_title()
-        return context
 
 
 class CommentViewSet(BaseTitleReviewViewSet):
@@ -327,3 +339,30 @@ class CommentViewSet(BaseTitleReviewViewSet):
         """
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
+
+    def get_object(self):
+        """
+        Получает конкретный объект комментария.
+
+        Перед возвратом комментария, проверяет, что отзыв связан
+        с конкретным произведением.
+
+        Returns:
+            Comment: Объект комментария.
+
+        Raises:
+            NotFound: Если отзыв не найден или не связан с произведением.
+        """
+        title = self.get_title()
+        review = self.get_review()
+
+        if review.title.id != title.id:
+            raise NotFound("Отзыв не принадлежит этому произведению.")
+
+        # Получаем комментарий
+        comment_id = self.kwargs.get('pk')
+        comment = get_object_or_404(Comment, id=comment_id, review=review)
+
+        self.check_object_permissions(self.request, comment)
+
+        return comment

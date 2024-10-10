@@ -1,13 +1,14 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from rest_framework.validators import UniqueValidator
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
 
-from api_yamdb.constants import MAX_LENGTH_EMAIL, MAX_LENGTH_NAME
+from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
+                                 MIN_SCORE_VALUE, MAX_SCORE_VALUE)
 
 
 class UserMixin:
@@ -154,7 +155,8 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate_score(self, value):
         """
-        Проверяет, что рейтинг находится в пределах от 1 до 10.
+        Проверяет, что рейтинг находится в пределах от MIN_SCORE_VALUE до
+        MAX_SCORE_VALUE.
 
         Args:
             value (int): Рейтинг отзыва.
@@ -163,9 +165,9 @@ class ReviewSerializer(serializers.ModelSerializer):
             serializers.ValidationError: Если рейтинг вне допустимого
             диапазона.
         """
-        if value < 1 or value > 10:
+        if value < MIN_SCORE_VALUE or value > MAX_SCORE_VALUE:
             raise serializers.ValidationError(
-                'Рейтинг должен быть от 1 до 10.'
+                'Рейтинг должен быть от MIN_SCORE_VALUE до MAX_SCORE_VALUE.'
             )
         return value
 
@@ -214,6 +216,42 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ['id', 'text', 'author', 'pub_date']
 
+    # def validate(self, data):
+    #     """
+    #     Выполняет валидацию данных комментария, проверяя наличие отзыва и его
+    #     принадлежность произведению.
+
+    #     Метод проверяет, что отзыв (Review), к которому относится создаваемый
+    #     или редактируемый комментарий, существует и принадлежит переданному
+    #     произведению (Title).
+    #     Если проверка не пройдена, выбрасывается ошибка валидации.
+
+    #     Args:
+    #         data (dict): Входные данные для сериализатора, содержащие данные
+    #         комментария.
+
+    #     Returns:
+    #         dict: Валидированные данные.
+
+    #     Raises:
+    #         ValidationError: Если отзыв не найден или если отзыв не
+    #         принадлежит указанному произведению.
+    #     """
+    #     title = self.context['title']  # Получаем объект Title из контекста
+    #     review = self.context['review']  # Получаем объект Review из контекста
+
+    #     # Получаем список всех отзывов для данного произведения
+    #     reviews_for_title = Review.objects.filter(
+    #         title_id=title.id
+    #     ).values_list('id', flat=True)
+
+    #     # Проверяем, что данный review_id принадлежит этому title
+    #     if review.id not in reviews_for_title:
+    #         raise serializers.ValidationError('Этот отзыв не принадлежит к '
+    #                                           'данному произведению.')
+
+    #     return data
+
     def validate(self, data):
         """
         Проверяет данные перед сохранением, включая наличие отзыва
@@ -223,12 +261,16 @@ class CommentSerializer(serializers.ModelSerializer):
             data (dict): Данные комментария.
 
         Raises:
-            ValidationError: Если отзыв не найден или если произведение
-            не существует.
+            NotFound: Если отзыв или произведение не найдены.
         """
-        title_id = self.context['view'].kwargs.get('title_id')
-        review_id = self.context['view'].kwargs.get('review_id')
-        get_object_or_404(Title, id=title_id)
-        if not Review.objects.filter(id=review_id).exists():
-            raise ValidationError("Отзыв не найден.")
+        title = self.context['title']
+        review = self.context['review']
+
+        # review = Review.objects.filter(id=review.id, title=title).first()
+        # if not review:
+        #     raise NotFound("Отзыв не найден для данного произведения.")
+        
+        if review.title.id != title.id:  # Проверка на принадлежность
+            raise NotFound("Отзыв не принадлежит этому произведению.")
+
         return data
