@@ -1,11 +1,13 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title
-from api_yamdb.constants import MAX_LENGTH_EMAIL, MAX_LENGTH_NAME
+from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
+                                 MIN_SCORE_VALUE, MAX_SCORE_VALUE)
+
 
 User = get_user_model()
 
@@ -153,10 +155,8 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Review.
-    Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности
-    отзыва для каждого произведения (title) от каждого пользователя
-    (author).
+    """Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности
+    отзыва для каждого произведения (title) от каждого пользователя (author).
     """
 
     author = serializers.SlugRelatedField(
@@ -168,7 +168,8 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'author', 'score', 'pub_date']
 
     def validate_score(self, value):
-        """Проверяет, что рейтинг находится в пределах от 1 до 10.
+        """Проверяет, что рейтинг находится в пределах от MIN_SCORE_VALUE до
+        MAX_SCORE_VALUE.
 
         Args:
             value (int): Рейтинг отзыва.
@@ -177,10 +178,9 @@ class ReviewSerializer(serializers.ModelSerializer):
             serializers.ValidationError: Если рейтинг вне допустимого
             диапазона.
         """
-
-        if value < 1 or value > 10:
+        if value < MIN_SCORE_VALUE or value > MAX_SCORE_VALUE:
             raise serializers.ValidationError(
-                'Рейтинг должен быть от 1 до 10.'
+                'Рейтинг должен быть от MIN_SCORE_VALUE до MAX_SCORE_VALUE.'
             )
         return value
 
@@ -235,12 +235,12 @@ class CommentSerializer(serializers.ModelSerializer):
             data (dict): Данные комментария.
 
         Raises:
-            ValidationError: Если отзыв не найден или если произведение
-            не существует.
+            NotFound: Если отзыв или произведение не найдены.
         """
-        title_id = self.context['view'].kwargs.get('title_id')
-        review_id = self.context['view'].kwargs.get('review_id')
-        get_object_or_404(Title, id=title_id)
-        if not Review.objects.filter(id=review_id).exists():
-            raise ValidationError("Отзыв не найден.")
+        title = self.context['title']
+        review = self.context['review']
+
+        if review.title.id != title.id:
+            raise NotFound("Отзыв не принадлежит этому произведению.")
+
         return data

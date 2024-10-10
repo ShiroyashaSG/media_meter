@@ -365,6 +365,7 @@ class CommentViewSet(BaseTitleReviewViewSet):
             serializer (Serializer): Сериализатор для создания нового
             комментария.
         """
+
         serializer.save(
             author=self.request.user,
             review=self.get_review()
