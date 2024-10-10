@@ -1,13 +1,11 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.exceptions import NotFound
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title
 from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
                                  MIN_SCORE_VALUE, MAX_SCORE_VALUE)
-
 
 User = get_user_model()
 
@@ -226,21 +224,3 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'text', 'author', 'pub_date']
-
-    def validate(self, data):
-        """Проверяет данные перед сохранением, включая наличие отзыва
-        и соответствующего произведения.
-
-        Args:
-            data (dict): Данные комментария.
-
-        Raises:
-            NotFound: Если отзыв или произведение не найдены.
-        """
-        title = self.context['title']
-        review = self.context['review']
-
-        if review.title.id != title.id:
-            raise NotFound("Отзыв не принадлежит этому произведению.")
-
-        return data
