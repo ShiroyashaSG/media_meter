@@ -112,6 +112,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
     """Сериализатор произведения для чтения."""
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
+    description = serializers.CharField(allow_blank=True, default="")
 
     class Meta:
         model = Title
@@ -122,6 +123,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     """Сериализатор произведения для записи."""
+    description = serializers.CharField(allow_blank=True, default="")
     genre = serializers.SlugRelatedField(
         many=True,
         slug_field='slug',
@@ -134,7 +136,14 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+        fields = ('id', 'name', 'year', 'rating', 'description', 'genre', 'category')
+
+    def validate_genre(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                'Поле \'genre\' не может быть пустым.'
+            )
+        return value
 
 
 class ReviewSerializer(serializers.ModelSerializer):

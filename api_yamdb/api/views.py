@@ -196,6 +196,31 @@ class TitleViewSet(viewsets.ModelViewSet):
             return TitleWriteSerializer
         return TitleReadSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        read_serializer = TitleReadSerializer(serializer.instance)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            read_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        read_serializer = TitleReadSerializer(serializer.instance)
+        return Response(
+            read_serializer.data,
+            status=status.HTTP_200_OK
+        )
+
 
 class BaseTitleReviewViewSet(viewsets.ModelViewSet):
     """
@@ -229,7 +254,10 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
             Review: Объект Review, соответствующий заданному review_id.
         """
         review_id = self.kwargs.get('review_id')
-        return get_object_or_404(Review, id=review_id)
+        title_id = self.kwargs.get('title_id')
+        return get_object_or_404(
+            Review, id=review_id, title_id=title_id
+        )
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':
@@ -270,8 +298,7 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         Returns:
             QuerySet: Набор отзывов, связанных с объектом Title.
         """
-        title = self.get_title()
-        return Review.objects.filter(title_id=title.id)
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
         """
@@ -280,8 +307,10 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         Args:
             serializer (Serializer): Сериализатор для создания нового отзыва.
         """
-        title = self.get_title()
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(
+            author=self.request.user,
+            title=self.get_title()
+        )
 
     def get_serializer_context(self):
         """
@@ -313,9 +342,7 @@ class CommentViewSet(BaseTitleReviewViewSet):
         Returns:
             QuerySet: Набор комментариев, связанных с объектом Review.
         """
-        self.get_title()
-        review = self.get_review()
-        return Comment.objects.filter(review_id=review.id)
+        return self.get_review().comments.all()
 
     def perform_create(self, serializer):
         """
@@ -325,5 +352,7 @@ class CommentViewSet(BaseTitleReviewViewSet):
             serializer (Serializer): Сериализатор для создания нового
             комментария.
         """
-        review = self.get_review()
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(
+            author=self.request.user,
+            review=self.get_review()
+        )
