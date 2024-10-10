@@ -7,7 +7,6 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
-from reviews.models import Review, Comment, Category, Genre, Title
 
 from .paginations import CategoryPagination, GenrePagination
 from .permissions import (IsAnonymous, IsAuthor, IsModerator,
@@ -17,7 +16,6 @@ from .serializers import (CategorySerializer, CommentSerializer,
                           TitleReadSerializer, TitleWriteSerializer,
                           TokenCreateSerializer, UserCreateSerializer,
                           UserSerializer)
-
 from .utils import send_confirmation_code
 
 
@@ -154,6 +152,7 @@ class BaseViewSet(
         mixins.CreateModelMixin,
         mixins.ListModelMixin,
         viewsets.GenericViewSet):
+    """Базовый viewset - класс для представлений genres и categories."""
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['name', 'slug']
     search_fields = ('name', 'slug',)
@@ -162,16 +161,19 @@ class BaseViewSet(
 
 
 class CategoryViewSet(BaseViewSet):
+    """Представление для работы с категориями."""
     queryset = Category.objects.all().order_by('slug')
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(BaseViewSet):
+    """Представление для работы с жанрами."""
     queryset = Genre.objects.all().order_by('slug')
     serializer_class = GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
+    """Представление для работы с произведениями."""
     queryset = Title.objects.all().order_by('name')
     permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous,)
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
@@ -179,6 +181,8 @@ class TitleViewSet(viewsets.ModelViewSet):
     search_fields = ('category__slug', 'genre__slug', 'name', 'year',)
 
     def get_queryset(self):
+        """Возвращает базовый queryset с применением пользовательского
+        пагинатора в зависимости от переданных параметров запроса."""
         queryset = super().get_queryset()
         if 'genre' in self.request.query_params:
             self.pagination_class = GenrePagination
@@ -187,11 +191,14 @@ class TitleViewSet(viewsets.ModelViewSet):
         return queryset
 
     def update(self, request, *args, **kwargs):
+        """Возращает статус ошибки 405 METHOD NOT ALLOWED
+        в случае отправки запроса PUT."""
         if request.method == 'PUT':
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
     def get_serializer_class(self):
+        """Возращает подходящий сериализатор в зависимости от запроса."""
         if self.request.method in ['POST', 'PATCH']:
             return TitleWriteSerializer
         return TitleReadSerializer
