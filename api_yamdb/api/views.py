@@ -272,7 +272,6 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['title'] = self.get_title()
 
-        # Если отзыв существует, добавляем его в контекст
         if 'review_id' in self.kwargs:
             context['review'] = self.get_review()
 
@@ -359,7 +358,6 @@ class CommentViewSet(BaseTitleReviewViewSet):
         if review.title.id != title.id:
             raise NotFound("Отзыв не принадлежит этому произведению.")
 
-        # Получаем комментарий
         comment_id = self.kwargs.get('pk')
         comment = get_object_or_404(Comment, id=comment_id, review=review)
 

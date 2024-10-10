@@ -1,6 +1,5 @@
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, NotFound
+from rest_framework.exceptions import NotFound
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from rest_framework.validators import UniqueValidator
@@ -142,8 +141,8 @@ class ReviewSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели Review.
 
-    Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности отзыва
-    для каждого произведения (title) от каждого пользователя (author).
+    Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности
+    отзыва для каждого произведения (title) от каждого пользователя (author).
     """
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
@@ -216,42 +215,6 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ['id', 'text', 'author', 'pub_date']
 
-    # def validate(self, data):
-    #     """
-    #     Выполняет валидацию данных комментария, проверяя наличие отзыва и его
-    #     принадлежность произведению.
-
-    #     Метод проверяет, что отзыв (Review), к которому относится создаваемый
-    #     или редактируемый комментарий, существует и принадлежит переданному
-    #     произведению (Title).
-    #     Если проверка не пройдена, выбрасывается ошибка валидации.
-
-    #     Args:
-    #         data (dict): Входные данные для сериализатора, содержащие данные
-    #         комментария.
-
-    #     Returns:
-    #         dict: Валидированные данные.
-
-    #     Raises:
-    #         ValidationError: Если отзыв не найден или если отзыв не
-    #         принадлежит указанному произведению.
-    #     """
-    #     title = self.context['title']  # Получаем объект Title из контекста
-    #     review = self.context['review']  # Получаем объект Review из контекста
-
-    #     # Получаем список всех отзывов для данного произведения
-    #     reviews_for_title = Review.objects.filter(
-    #         title_id=title.id
-    #     ).values_list('id', flat=True)
-
-    #     # Проверяем, что данный review_id принадлежит этому title
-    #     if review.id not in reviews_for_title:
-    #         raise serializers.ValidationError('Этот отзыв не принадлежит к '
-    #                                           'данному произведению.')
-
-    #     return data
-
     def validate(self, data):
         """
         Проверяет данные перед сохранением, включая наличие отзыва
@@ -266,11 +229,7 @@ class CommentSerializer(serializers.ModelSerializer):
         title = self.context['title']
         review = self.context['review']
 
-        # review = Review.objects.filter(id=review.id, title=title).first()
-        # if not review:
-        #     raise NotFound("Отзыв не найден для данного произведения.")
-
-        if review.title.id != title.id:  # Проверка на принадлежность
+        if review.title.id != title.id:
             raise NotFound("Отзыв не принадлежит этому произведению.")
 
         return data
