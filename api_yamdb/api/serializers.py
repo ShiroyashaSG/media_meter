@@ -123,7 +123,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     """Сериализатор произведения для записи."""
-    description = serializers.CharField(allow_blank=True, default="")
+    description = serializers.CharField(allow_blank=True, default='')
     genre = serializers.SlugRelatedField(
         many=True,
         slug_field='slug',
@@ -136,7 +136,9 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'rating', 'description', 'genre', 'category')
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
 
     def validate_genre(self, value):
         if not value:
@@ -150,8 +152,9 @@ class ReviewSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели Review.
 
-    Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности отзыва
-    для каждого произведения (title) от каждого пользователя (author).
+    Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности
+    отзыва для каждого произведения (title) от каждого пользователя
+    (author).
     """
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
