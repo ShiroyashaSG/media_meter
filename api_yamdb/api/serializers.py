@@ -269,7 +269,7 @@ class CommentSerializer(serializers.ModelSerializer):
         # review = Review.objects.filter(id=review.id, title=title).first()
         # if not review:
         #     raise NotFound("Отзыв не найден для данного произведения.")
-        
+
         if review.title.id != title.id:  # Проверка на принадлежность
             raise NotFound("Отзыв не принадлежит этому произведению.")
 
