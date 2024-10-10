@@ -13,6 +13,7 @@ User = get_user_model()
 
 class BaseModel(models.Model):
     """Базовая модель."""
+
     name = models.CharField(max_length=MAX_LENGTH, verbose_name='Название')
     slug = models.SlugField(
         max_length=LIMIT_LENGTH,
@@ -50,6 +51,7 @@ class Category(BaseModel):
 
 class Title(models.Model):
     """Модель произведения."""
+
     name = models.CharField(max_length=MAX_LENGTH, verbose_name='Название')
     year = models.PositiveIntegerField(
         verbose_name='Год выпуска',
@@ -83,6 +85,7 @@ class Title(models.Model):
 
 class Review(models.Model):
     """Модель отзыва."""
+
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -123,6 +126,7 @@ class Review(models.Model):
 
 class Comment(models.Model):
     """Модель комментария."""
+
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,

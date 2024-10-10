@@ -1,13 +1,13 @@
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
-from rest_framework.validators import UniqueValidator
 from reviews.models import Category, Comment, Genre, Review, Title
-from users.models import User
-
 from api_yamdb.constants import MAX_LENGTH_EMAIL, MAX_LENGTH_NAME
+
+User = get_user_model()
 
 
 class UserMixin:
@@ -43,7 +43,6 @@ class UserMixin:
         """Влидация поля username на доступность использования 'me' в качестве
         username пользователя.
         """
-
         if username == 'me':
             raise serializers.ValidationError(
                 'Нельзя использовать \'me\' в качестве username.'
@@ -96,6 +95,7 @@ class TokenCreateSerializer(serializers.Serializer):
 
 class GenreSerializer(serializers.ModelSerializer):
     """Сериализатор жанра."""
+
     class Meta:
         model = Genre
         fields = ('name', 'slug')
@@ -103,6 +103,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор категории."""
+
     class Meta:
         model = Category
         fields = ('name', 'slug')
@@ -110,6 +111,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class TitleReadSerializer(serializers.ModelSerializer):
     """Сериализатор произведения для чтения."""
+
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
     description = serializers.CharField(allow_blank=True, default="")
@@ -123,6 +125,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     """Сериализатор произведения для записи."""
+
     description = serializers.CharField(allow_blank=True, default='')
     genre = serializers.SlugRelatedField(
         many=True,
@@ -141,6 +144,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         )
 
     def validate_genre(self, value):
+        """Проверка поля genre, оно не должно быть пустым."""
         if not value:
             raise serializers.ValidationError(
                 'Поле \'genre\' не может быть пустым.'
@@ -149,13 +153,12 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для модели Review.
-
+    """Сериализатор для модели Review.
     Обрабатывает данные отзыва, включая валидацию рейтинга и уникальности
     отзыва для каждого произведения (title) от каждого пользователя
     (author).
     """
+
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
@@ -165,8 +168,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'author', 'score', 'pub_date']
 
     def validate_score(self, value):
-        """
-        Проверяет, что рейтинг находится в пределах от 1 до 10.
+        """Проверяет, что рейтинг находится в пределах от 1 до 10.
 
         Args:
             value (int): Рейтинг отзыва.
@@ -175,6 +177,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             serializers.ValidationError: Если рейтинг вне допустимого
             диапазона.
         """
+
         if value < 1 or value > 10:
             raise serializers.ValidationError(
                 'Рейтинг должен быть от 1 до 10.'
@@ -182,8 +185,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        """
-        Проверяет данные перед сохранением, включая уникальность отзыва
+        """Проверяет данные перед сохранением, включая уникальность отзыва
         для текущего произведения и пользователя.
 
         Args:
@@ -212,12 +214,11 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для модели Comment.
-
+    """Сериализатор для модели Comment.
     Обрабатывает данные комментария, включая валидацию на наличие
     соответствующего отзыва и произведения.
     """
+
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
@@ -227,8 +228,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'author', 'pub_date']
 
     def validate(self, data):
-        """
-        Проверяет данные перед сохранением, включая наличие отзыва
+        """Проверяет данные перед сохранением, включая наличие отзыва
         и соответствующего произведения.
 
         Args:

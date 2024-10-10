@@ -1,14 +1,13 @@
-from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from reviews.models import Category, Comment, Genre, Review, Title
-from users.models import User
-from reviews.models import Review, Comment, Category, Genre, Title
 
+from reviews.models import Category, Genre, Review, Title
 from .paginations import CategoryPagination, GenrePagination
 from .permissions import (IsAnonymous, IsAuthor, IsModerator,
                           IsSuperUserOrIsAdmin)
@@ -17,8 +16,9 @@ from .serializers import (CategorySerializer, CommentSerializer,
                           TitleReadSerializer, TitleWriteSerializer,
                           TokenCreateSerializer, UserCreateSerializer,
                           UserSerializer)
-
 from .utils import send_confirmation_code
+
+User = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -39,7 +39,6 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def user_by_username(self, request, username):
         """Изменение данных учетной записи конкретного пользователя."""
-
         user = get_object_or_404(User, username=username)
         if request.method == 'PATCH':
             serializer = UserSerializer(user, data=request.data, partial=True)
@@ -154,6 +153,11 @@ class BaseViewSet(
         mixins.CreateModelMixin,
         mixins.ListModelMixin,
         viewsets.GenericViewSet):
+    """Базовое представление с возможностью создания/удаления/получения
+    данных. Создание/удаление доступны администратору, безопасные методы
+    доступны анонимному пользователю. Есть возможность поиска и фильтрации.
+    """
+
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['name', 'slug']
     search_fields = ('name', 'slug',)
@@ -162,16 +166,24 @@ class BaseViewSet(
 
 
 class CategoryViewSet(BaseViewSet):
+    """Представление для модели категорий, наследуемое от
+    базового представления."""
+
     queryset = Category.objects.all().order_by('slug')
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(BaseViewSet):
+    """Представление для модели жаноров, наследуемое от
+    базового представления."""
+
     queryset = Genre.objects.all().order_by('slug')
     serializer_class = GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
+    """Представление для модели произведений."""
+
     queryset = Title.objects.all().order_by('name')
     permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous,)
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
@@ -179,6 +191,9 @@ class TitleViewSet(viewsets.ModelViewSet):
     search_fields = ('category__slug', 'genre__slug', 'name', 'year',)
 
     def get_queryset(self):
+        """Использование пагинации в зависимости от параметров передаваемых
+        в запросе.
+        """
         queryset = super().get_queryset()
         if 'genre' in self.request.query_params:
             self.pagination_class = GenrePagination
@@ -187,16 +202,20 @@ class TitleViewSet(viewsets.ModelViewSet):
         return queryset
 
     def update(self, request, *args, **kwargs):
+        """Ограничение на приенение метода 'PUT'."""
         if request.method == 'PUT':
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
     def get_serializer_class(self):
+        """Выбор сериализатора в зависимости от метода."""
         if self.request.method in ['POST', 'PATCH']:
             return TitleWriteSerializer
         return TitleReadSerializer
 
     def create(self, request, *args, **kwargs):
+        """После создания, результат выводит через сериализатор
+        используемый для получения данных."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -209,6 +228,8 @@ class TitleViewSet(viewsets.ModelViewSet):
         )
 
     def partial_update(self, request, *args, **kwargs):
+        """После обновления, результат выводит через сериализатор
+        используемый для получения данных."""
         instance = self.get_object()
         serializer = self.get_serializer(
             instance, data=request.data, partial=True
@@ -223,17 +244,14 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class BaseTitleReviewViewSet(viewsets.ModelViewSet):
-    """
-    Базовый вьюсет для работы с объектами Title и Review.
+    """Базовое представление для работы с объектами Title и Review.
 
     Содержит общую логику, которая используется в других вьюсетах,
     связанных с отзывами и произведениями.
     """
 
     def get_title(self):
-        """
-        Получает и возвращает объект Title на основе переданного title_id.
-
+        """Получает и возвращает объект Title на основе переданного title_id.
         Использует `title_id` из URL-параметров для получения объекта Title.
         Если объект не найден, возвращает 404 ошибку.
 
@@ -244,9 +262,7 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
         return get_object_or_404(Title, id=title_id)
 
     def get_review(self):
-        """
-        Получает и возвращает объект Review на основе переданного review_id.
-
+        """Получает и возвращает объект Review на основе переданного review_id.
         Использует `review_id` из URL-параметров для получения объекта Review.
         Если объект не найден, возвращает 404 ошибку.
 
@@ -260,13 +276,13 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
         )
 
     def update(self, request, *args, **kwargs):
+        """Ограничение на приенение метода 'PUT'."""
         if request.method == 'PUT':
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
     def get_permissions(self):
-        """
-        Определяет разрешения для методов вьюсета на основе типа запроса.
+        """Определяет разрешения для методов вьюсета на основе типа запроса.
 
         Returns:
             list: Список классов разрешений для данного запроса.
@@ -283,17 +299,15 @@ class BaseTitleReviewViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(BaseTitleReviewViewSet):
-    """
-    Вьюсет для работы с отзывами.
-
+    """Представление для работы с отзывами.
     Предоставляет методы для создания, получения, обновления и удаления
     отзывов.
     """
+
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        """
-        Получает набор отзывов, связанных с конкретным произведением.
+        """Получает набор отзывов, связанных с конкретным произведением.
 
         Returns:
             QuerySet: Набор отзывов, связанных с объектом Title.
@@ -301,8 +315,7 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        """
-        Сохраняет новый отзыв, устанавливая автора и произведение.
+        """Сохраняет новый отзыв, устанавливая автора и произведение.
 
         Args:
             serializer (Serializer): Сериализатор для создания нового отзыва.
@@ -313,9 +326,7 @@ class ReviewViewSet(BaseTitleReviewViewSet):
         )
 
     def get_serializer_context(self):
-        """
-        Получает контекст для сериализатора.
-
+        """Получает контекст для сериализатора.
         Добавляет объект Title в контекст для доступа в сериализаторе.
 
         Returns:
@@ -327,17 +338,15 @@ class ReviewViewSet(BaseTitleReviewViewSet):
 
 
 class CommentViewSet(BaseTitleReviewViewSet):
-    """
-    Вьюсет для работы с комментариями.
-
+    """Представление для работы с комментариями.
     Предоставляет методы для создания, получения, обновления и удаления
     комментариев.
     """
+
     serializer_class = CommentSerializer
 
     def get_queryset(self):
-        """
-        Получает набор комментариев, связанных с конкретным отзывом.
+        """Получает набор комментариев, связанных с конкретным отзывом.
 
         Returns:
             QuerySet: Набор комментариев, связанных с объектом Review.
@@ -345,8 +354,7 @@ class CommentViewSet(BaseTitleReviewViewSet):
         return self.get_review().comments.all()
 
     def perform_create(self, serializer):
-        """
-        Сохраняет новый комментарий, устанавливая автора и отзыв.
+        """Сохраняет новый комментарий, устанавливая автора и отзыв.
 
         Args:
             serializer (Serializer): Сериализатор для создания нового
