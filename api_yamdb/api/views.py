@@ -7,6 +7,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
+from reviews.models import Category, Comment, Genre, Review, Title
+from users.models import User
+
 from reviews.models import Category, Genre, Review, Title
 from .paginations import CategoryPagination, GenrePagination
 from .permissions import (IsAnonymous, IsAuthor, IsModerator,
@@ -182,7 +185,7 @@ class GenreViewSet(BaseViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    """Представление для модели произведений."""
+    """Представление для работы с произведениями."""
 
     queryset = Title.objects.all().order_by('name')
     permission_classes = (IsSuperUserOrIsAdmin | IsAnonymous,)
@@ -191,9 +194,9 @@ class TitleViewSet(viewsets.ModelViewSet):
     search_fields = ('category__slug', 'genre__slug', 'name', 'year',)
 
     def get_queryset(self):
-        """Использование пагинации в зависимости от параметров передаваемых
-        в запросе.
-        """
+        """Возвращает базовый queryset с применением пользовательского
+        пагинатора в зависимости от переданных параметров запроса."""
+
         queryset = super().get_queryset()
         if 'genre' in self.request.query_params:
             self.pagination_class = GenrePagination
@@ -202,13 +205,15 @@ class TitleViewSet(viewsets.ModelViewSet):
         return queryset
 
     def update(self, request, *args, **kwargs):
-        """Ограничение на приенение метода 'PUT'."""
+        """Возращает статус ошибки 405 METHOD NOT ALLOWED
+        в случае отправки запроса PUT."""
+
         if request.method == 'PUT':
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
     def get_serializer_class(self):
-        """Выбор сериализатора в зависимости от метода."""
+        """Возращает подходящий сериализатор в зависимости от запроса."""
         if self.request.method in ['POST', 'PATCH']:
             return TitleWriteSerializer
         return TitleReadSerializer

@@ -21,29 +21,37 @@
 
 Чтобы развернуть проект локально, выполните следующие шаги:
 
-1. Клонируйте репозиторий:
+0. Клонируйте репозиторий:
    ```bash
    git clone https://github.com/ShiroyashaSG/api_yamdb.git
    ```
-2. Перейдите в директорию проекта:
+1. Перейдите в директорию проекта:
    ```bash
    cd api_yamdb
    ```
-3. Cоздать и активировать виртуальное окружение:
+2. Cоздайте и активируйте виртуальное окружение:
    ```bash
    python -m venv venv
    source venv/bin/activate  # Для Windows: venv\Scripts\activate
    ```
-4. Установить зависимости из файла requirements.txt:
+3. Установите зависимости из файла requirements.txt:
    ```bash
    python3 -m pip install --upgrade pip
    pip install -r requirements.txt
    ```
-5. Установить зависимости из файла requirements.txt:
+4. Создайте миграции:
+  ```bash
+   python3 manage.py makemigrations
+   ```
+5. Примените миграции:
    ```bash
    python3 manage.py migrate
    ```
-6. Установить зависимости из файла requirements.txt:
+6. Загрузите данные из csv - файлов в базу данных:
+   ```bash
+   python3 manage.py import_data
+   ```
+7. Запустите сервер:
    ```bash
    python3 manage.py runserver
    ```
