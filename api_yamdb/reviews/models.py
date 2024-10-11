@@ -26,7 +26,7 @@ class BaseModel(models.Model):
         )]
     )
 
-    def str(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -75,7 +75,7 @@ class Title(models.Model):
     def rating(self):
         return self.reviews.aggregate(Avg('score'))['score__avg']
 
-    def str(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -120,7 +120,7 @@ class Review(models.Model):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
 
-    def str(self):
+    def __str__(self):
         return f'{self.author_id} — {self.title} ({self.score})'
 
 
@@ -147,5 +147,5 @@ class Comment(models.Model):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
 
-    def str(self):
+    def __str__(self):
         return f'{self.author} комментирует {self.review}'
