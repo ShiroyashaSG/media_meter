@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.validators import (MaxValueValidator, MinValueValidator,
                                     RegexValidator)
 from django.db import models
@@ -6,9 +7,17 @@ from django.db.models import Avg
 from django.utils import timezone
 
 from api_yamdb.constants import (LIMIT_LENGTH, MAX_LENGTH, MAX_SCORE_VALUE,
-                                 MIN_SCORE_VALUE)
+                                 MIN_SCORE_VALUE, REGEX_SLUG_BASE_MODEL,
+                                 MIN_VALUE_VALIDATOR)
 
 User = get_user_model()
+
+
+def max_current_year(value):
+    """Динамическая валидация, в зависимости от текущего года."""
+    current_year = timezone.now().year
+    if value > current_year:
+        raise ValidationError(f'Год не может быть больше {current_year}.')
 
 
 class BaseModel(models.Model):
@@ -20,13 +29,13 @@ class BaseModel(models.Model):
         unique=True,
         verbose_name='Slug',
         validators=[RegexValidator(
-            regex=r'^[-a-zA-Z0-9_]+$',
+            regex=REGEX_SLUG_BASE_MODEL,
             message='Slug может содержать только буквы,'
                     + 'цифры, дефисы и символы подчеркивания.'
         )]
     )
 
-    def str(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -55,10 +64,13 @@ class Title(models.Model):
     name = models.CharField(max_length=MAX_LENGTH, verbose_name='Название')
     year = models.PositiveIntegerField(
         verbose_name='Год выпуска',
-        validators=[MaxValueValidator(timezone.now().year)],
+        validators=[
+            MinValueValidator(MIN_VALUE_VALIDATOR),
+            max_current_year
+        ],
     )
     description = models.TextField(
-        null=True, blank=True, verbose_name='Описание'
+        null=False, blank=True, verbose_name='Описание'
     )
     genre = models.ManyToManyField(
         Genre, verbose_name='Жанры', related_name='titles'
@@ -75,7 +87,7 @@ class Title(models.Model):
     def rating(self):
         return self.reviews.aggregate(Avg('score'))['score__avg']
 
-    def str(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -107,7 +119,7 @@ class Review(models.Model):
         ],
         help_text=f"Оценка от {MIN_SCORE_VALUE} до {MAX_SCORE_VALUE}."
     )
-    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    pub_date = models.DateTimeField('Дата публикации', default=timezone.now)
 
     class Meta:
         constraints = [
@@ -120,7 +132,7 @@ class Review(models.Model):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
 
-    def str(self):
+    def __str__(self):
         return f'{self.author_id} — {self.title} ({self.score})'
 
 
@@ -140,12 +152,12 @@ class Comment(models.Model):
         related_name='comments',
         verbose_name='Автор'
     )
-    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    pub_date = models.DateTimeField('Дата публикации', default=timezone.now)
 
     class Meta:
         ordering = ['pub_date']
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
 
-    def str(self):
+    def __str__(self):
         return f'{self.author} комментирует {self.review}'
