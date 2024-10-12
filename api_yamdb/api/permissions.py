@@ -26,14 +26,11 @@ class IsModerator(permissions.BasePermission):
     модератеру.
     """
 
-    def has_permission(self, request, view):
+    def has_object_permission(self, request, view, obj):
         return (
             request.user.is_authenticated
             and request.user.is_moderator
         )
-
-    def has_object_permission(self, request, view, obj):
-        return self.has_permission(request, view)
 
 
 class IsSuperUserOrIsAdmin(permissions.BasePermission):
