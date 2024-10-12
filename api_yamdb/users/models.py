@@ -1,14 +1,14 @@
-from enum import Enum
+from django.utils.translation import gettext_lazy as _
 
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
 
 from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
-                                 MAX_LENGTH_ROLE)
+                                 MAX_LENGTH_ROLE, REGEX_USERNAME)
 
 
-class Role(Enum):
+class Role(models.TextChoices):
     """Поле перечисления ролей пользователей."""
 
     USER = 'user'
@@ -25,7 +25,7 @@ class User(AbstractUser):
         unique=True,
         db_index=True,
         validators=[RegexValidator(
-            regex=r'^[\w.@+-]+\Z',
+            regex=REGEX_USERNAME,
             message='Недопустимый символ в имени пользователя.'
         )]
     )
@@ -56,7 +56,7 @@ class User(AbstractUser):
     role = models.CharField(
         'Роль',
         max_length=MAX_LENGTH_ROLE,
-        choices=[(role.value, role.name) for role in Role],
+        choices=Role.choices,
         default=Role.USER.value,
         help_text='Admin, moderator или user. По-умолчанию user.'
     )
@@ -64,7 +64,7 @@ class User(AbstractUser):
     class Meta:
         verbose_name = 'пользователь'
         verbose_name_plural = 'Пользователи'
-        ordering = ('id', )
+        ordering = ('username', )
         constraints = [
             models.UniqueConstraint(
                 fields=['username', 'email'],
