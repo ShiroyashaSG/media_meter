@@ -4,7 +4,8 @@ from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title
 from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
-                                 MIN_SCORE_VALUE, MAX_SCORE_VALUE)
+                                 MIN_SCORE_VALUE, MAX_SCORE_VALUE,
+                                 REGEX_USERNAME)
 
 User = get_user_model()
 
@@ -13,7 +14,7 @@ class UserMixin:
     """Миксин для сериализатора пользователя."""
 
     username = serializers.RegexField(
-        regex=r'^[\w.@+-]+\Z',
+        regex=REGEX_USERNAME,
         max_length=MAX_LENGTH_NAME,
         required=True,
         validators=[UniqueValidator(
@@ -42,9 +43,9 @@ class UserMixin:
         """Влидация поля username на доступность использования 'me' в качестве
         username пользователя.
         """
-        if username == 'me':
+        if str(username).lower() == 'me':
             raise serializers.ValidationError(
-                'Нельзя использовать \'me\' в качестве username.'
+                'Нельзя использовать "me" в качестве username.'
             )
         return username
 
@@ -83,7 +84,7 @@ class TokenCreateSerializer(serializers.Serializer):
     """Сериализатор токена."""
 
     username = serializers.RegexField(
-        regex=r'^[\w.@+-]+\Z',
+        regex=REGEX_USERNAME,
         max_length=MAX_LENGTH_NAME,
         required=True
     )
@@ -146,7 +147,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         """Проверка поля genre, оно не должно быть пустым."""
         if not value:
             raise serializers.ValidationError(
-                'Поле \'genre\' не может быть пустым.'
+                'Поле "genre" не может быть пустым.'
             )
         return value
 
@@ -177,7 +178,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         """
         if value < MIN_SCORE_VALUE or value > MAX_SCORE_VALUE:
             raise serializers.ValidationError(
-                'Рейтинг должен быть от MIN_SCORE_VALUE до MAX_SCORE_VALUE.'
+                (
+                    'Рейтинг должен быть от '
+                    f'{MIN_SCORE_VALUE} до {MAX_SCORE_VALUE}.'
+                )
             )
         return value
 
