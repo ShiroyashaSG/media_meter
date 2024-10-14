@@ -7,8 +7,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-
-from users.models import User
 from reviews.models import Category, Genre, Review, Title
 from .paginations import CategoryPagination, GenrePagination
 from .permissions import (IsAnonymous, IsAuthor, IsModerator,
@@ -110,7 +108,7 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 },
                 status=status.HTTP_200_OK
             )
-        elif user_email:
+        elif user_username and user_email:
             return Response(
                 {
                     'email': [
