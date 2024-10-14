@@ -176,7 +176,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             serializers.ValidationError: Если рейтинг вне допустимого
             диапазона.
         """
-        if not MIN_SCORE_VALUE < value < MAX_SCORE_VALUE:
+        if MIN_SCORE_VALUE > value > MAX_SCORE_VALUE:
             raise serializers.ValidationError(
                 (
                     'Рейтинг должен быть от '
