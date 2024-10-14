@@ -43,7 +43,7 @@ class UserMixin:
         """Влидация поля username на доступность использования 'me' в качестве
         username пользователя.
         """
-        if str(username).lower() == 'me':
+        if username.lower() == 'me':
             raise serializers.ValidationError(
                 'Нельзя использовать "me" в качестве username.'
             )
@@ -176,7 +176,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             serializers.ValidationError: Если рейтинг вне допустимого
             диапазона.
         """
-        if value < MIN_SCORE_VALUE or value > MAX_SCORE_VALUE:
+        if not MIN_SCORE_VALUE < value < MAX_SCORE_VALUE:
             raise serializers.ValidationError(
                 (
                     'Рейтинг должен быть от '
