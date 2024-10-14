@@ -7,9 +7,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import Category, Genre, Review, Title
-from users.models import User
 
+from users.models import User
 from reviews.models import Category, Genre, Review, Title
 from .paginations import CategoryPagination, GenrePagination
 from .permissions import (IsAnonymous, IsAuthor, IsModerator,
@@ -96,31 +95,33 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         user_email = User.objects.filter(
             email=request.data.get('email')
         ).first()
-        if user_username:
-            if user_username.email == serializer.initial_data.get('email'):
-                confirmation_code = default_token_generator.make_token(
-                    user_username
-                )
-                send_confirmation_code(user_username.email, confirmation_code)
-                return Response(
-                    {
-                        'email': user_username.email,
-                        'username': user_username.username
-                    },
-                    status=status.HTTP_200_OK
-                )
-            elif user_email:
-                return Response(
-                    {
-                        'email': [
-                            user_email.email
-                        ],
-                        'username': [
-                            user_username.username
-                        ]
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        if (
+            user_username
+            and user_username.email == serializer.initial_data.get('email')
+        ):
+            confirmation_code = default_token_generator.make_token(
+                user_username
+            )
+            send_confirmation_code(user_username.email, confirmation_code)
+            return Response(
+                {
+                    'email': user_username.email,
+                    'username': user_username.username
+                },
+                status=status.HTTP_200_OK
+            )
+        elif user_email:
+            return Response(
+                {
+                    'email': [
+                        user_email.email
+                    ],
+                    'username': [
+                        user_username.username
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
         serializer.is_valid(raise_exception=True)
         user = User.objects.create(**serializer.validated_data)
         confirmation_code = default_token_generator.make_token(user)
